@@ -3,25 +3,33 @@
 export(hzRun)
 export(xoDetect)
 export(xoPhase)
-import(methods)
-importFrom(BiocParallel,MulticoreParam)
-importFrom(BiocParallel,SerialParam)
-importFrom(BiocParallel,bplapply)
-importFrom(GenomicRanges,GRanges)
-importFrom(GenomicRanges,GRangesList)
-importFrom(GenomicRanges,makeGRangesFromDataFrame)
-importFrom(GenomicRanges,mcols)
-importFrom(GenomicRanges,seqnames)
-importFrom(GenomicRanges,start)
-importFrom(IRanges,IRanges)
+importFrom(BiocParallel,
+  MulticoreParam,
+  SerialParam,
+  bplapply
+)
+importFrom(GenomicRanges,
+  GRanges,
+  GRangesList,
+  end,
+  makeGRangesFromDataFrame,
+  mcols,
+  seqnames,
+  start,
+  strand,
+  width
+)
 importFrom(S4Vectors,DataFrame)
 importFrom(SummarizedExperiment,SummarizedExperiment)
-importFrom(SummarizedExperiment,colData)
-importFrom(SummarizedExperiment,rowData)
 importFrom(dplyr,distinct)
+importFrom(methods,
+  as,
+  is
+)
 importFrom(snpStats,read.plink)
 importFrom(stats,setNames)
-importFrom(stats,var)
-importFrom(utils,read.delim)
-importFrom(utils,write.csv)
-importFrom(utils,write.table)
+importFrom(utils,
+  read.delim,
+  write.csv,
+  write.table
+)

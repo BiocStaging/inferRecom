@@ -76,15 +76,6 @@
 #'         haplotypes
 #' }
 #'
-#' @import methods
-#' @importFrom snpStats read.plink
-#' @importFrom S4Vectors DataFrame
-#' @importFrom GenomicRanges GRanges mcols seqnames
-#' @importFrom SummarizedExperiment SummarizedExperiment rowData colData
-#' @importFrom utils read.delim write.table
-#' @importFrom BiocParallel SerialParam MulticoreParam bplapply
-#' @importFrom stats setNames
-#'
 #' @examples
 #' # Load example data
 #' dataPath <- system.file("extdata", package = "inferRecom")
@@ -175,12 +166,12 @@ xoPhase <- function(plinkFile,
     plinkFile <- sub("\\.(bed|bim|fam)$", "", plinkFile, ignore.case = TRUE)
 
     ## Read PLINK data
-    ped <- snpStats::read.plink(plinkFile)
+    ped <- read.plink(plinkFile)
 
     ## Convert SnpMatrix to numeric matrix
     genoSnpmat <- ped$genotypes
     if (inherits(genoSnpmat, "SnpMatrix")) {
-        geno <- t(methods::as(genoSnpmat, "numeric"))
+        geno <- t(as(genoSnpmat, "numeric"))
     } else {
         geno <- t(as.matrix(genoSnpmat))
     }
@@ -192,7 +183,7 @@ xoPhase <- function(plinkFile,
     if (!file.exists(bimFile)) {
         stop("BIM file not found: ", bimFile)
     }
-    bim <- utils::read.delim(bimFile,
+    bim <- read.delim(bimFile,
         header = FALSE, sep = "\t",
         stringsAsFactors = FALSE, row.names = NULL
     )
@@ -222,7 +213,7 @@ xoPhase <- function(plinkFile,
     xoMat <- xoDetectMaternal
 
     ## Phase each family using parallel processing
-    phaseList <- BiocParallel::bplapply(familyIds, function(id) {
+    phaseList <- bplapply(familyIds, function(id) {
         .phaseSingleFamily(
             familyId = id,
             geno = geno,
@@ -260,7 +251,7 @@ xoPhase <- function(plinkFile,
         return(TRUE)
     }
 
-    chroms <- as.character(GenomicRanges::seqnames(gr))
+    chroms <- as.character(seqnames(gr))
     length(unique(chroms)) == 1
 }
 
@@ -1329,7 +1320,7 @@ xoPhase <- function(plinkFile,
     colDataDf$familyId <- unname(sampleToFamily[allSamples])
 
     ## Create SummarizedExperiment
-    SummarizedExperiment::SummarizedExperiment(
+    SummarizedExperiment(
         assays  = list(phased = genoMatrix),
         rowData = rowDataDf,
         colData = colDataDf
@@ -1482,7 +1473,7 @@ xoPhase <- function(plinkFile,
     }
 
     ## Extract metadata columns first
-    mcolsData <- GenomicRanges::mcols(granges)
+    mcolsData <- mcols(granges)
 
     if (!is.null(mcolsData) && ncol(mcolsData) > 0) {
         ## Convert mcols to data.frame
@@ -1490,11 +1481,11 @@ xoPhase <- function(plinkFile,
 
         ## Add genomic location columns (prepend to maintain order)
         locationDf <- data.frame(
-            seqnames = as.character(GenomicRanges::seqnames(granges)),
-            start = GenomicRanges::start(granges),
-            end = GenomicRanges::end(granges),
-            width = GenomicRanges::width(granges),
-            strand = as.character(GenomicRanges::strand(granges)),
+            seqnames = as.character(seqnames(granges)),
+            start = start(granges),
+            end = end(granges),
+            width = width(granges),
+            strand = as.character(strand(granges)),
             stringsAsFactors = FALSE
         )
 
@@ -1503,11 +1494,11 @@ xoPhase <- function(plinkFile,
     } else {
         ## Basic data frame with genomic coordinates (no metadata)
         df <- data.frame(
-            seqnames = as.character(GenomicRanges::seqnames(granges)),
-            start = GenomicRanges::start(granges),
-            end = GenomicRanges::end(granges),
-            width = GenomicRanges::width(granges),
-            strand = as.character(GenomicRanges::strand(granges)),
+            seqnames = as.character(seqnames(granges)),
+            start = start(granges),
+            end = end(granges),
+            width = width(granges),
+            strand = as.character(strand(granges)),
             stringsAsFactors = FALSE
         )
     }

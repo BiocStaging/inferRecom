@@ -36,7 +36,6 @@ Depends:
 Imports:
     methods,
     utils,
-    IRanges,
     snpStats,
     BiocParallel,
     dplyr,

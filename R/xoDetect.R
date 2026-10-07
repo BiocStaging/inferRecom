@@ -51,16 +51,6 @@
 #' Parallel processing is performed by family, improving efficiency for datasets
 #' with many families.
 #'
-#' @import methods
-#' @importFrom S4Vectors DataFrame
-#' @importFrom GenomicRanges GRanges GRangesList seqnames start makeGRangesFromDataFrame
-#' @importFrom IRanges IRanges
-#' @importFrom snpStats read.plink
-#' @importFrom utils read.delim write.csv
-#' @importFrom dplyr distinct
-#' @importFrom BiocParallel SerialParam MulticoreParam bplapply
-#' @importFrom stats var
-#'
 #' @examples
 #' # Serial execution (default)
 #'
@@ -167,8 +157,8 @@ xoDetect <- function(plinkFile,
     plinkFile <- sub("\\.(bed|bim|fam)$", "", plinkFile, ignore.case = TRUE)
 
     ## Read PLINK data
-    pedData <- snpStats::read.plink(plinkFile)
-    mapDf <- utils::read.delim(mapFile, stringsAsFactors = FALSE)
+    pedData <- read.plink(plinkFile)
+    mapDf <- read.delim(mapFile, stringsAsFactors = FALSE)
 
     if (!all(c("chr", "pos", "cM") %in% colnames(mapDf))) {
         stop("mapFile must have columns: chr, pos, cM")
@@ -203,7 +193,7 @@ xoDetect <- function(plinkFile,
 
     ## Write output if requested
     if (!is.null(out) && nrow(resDf) > 0L) {
-        utils::write.csv(as.data.frame(resDf),
+        write.csv(as.data.frame(resDf),
             file = out,
             row.names = FALSE, fileEncoding = "UTF-8"
         )
@@ -217,7 +207,7 @@ xoDetect <- function(plinkFile,
 
         if (caseControl == FALSE) {
             # Convert to GRanges
-            grResult <- GenomicRanges::makeGRangesFromDataFrame(
+            grResult <- makeGRangesFromDataFrame(
                 df = resDf,
                 seqnames.field = "chromosome",
                 start.field = "startPos",
@@ -233,7 +223,7 @@ xoDetect <- function(plinkFile,
             )
 
             # Convert to GRanges first
-            grTemp <- GenomicRanges::makeGRangesFromDataFrame(
+            grTemp <- makeGRangesFromDataFrame(
                 df = resDf,
                 seqnames.field = "chromosome",
                 start.field = "startPos",
@@ -705,7 +695,7 @@ xoDetect <- function(plinkFile,
     }
 
     ## Process families in parallel
-    xoList <- BiocParallel::bplapply(famIds, function(currentFamId) {
+    xoList <- bplapply(famIds, function(currentFamId) {
         .processSingleFamily(currentFamId, famSubset, genoMatrix, pedMap,
             geneticMap, parent, snpFilter,
             familySize = 2L
@@ -735,7 +725,7 @@ xoDetect <- function(plinkFile,
     xoAllEvents <- .addPositions(xoAllEvents, pedMap, geneticMap)
 
     ## Remove duplicates
-    xoAllEvents <- dplyr::distinct(xoAllEvents)
+    xoAllEvents <- distinct(xoAllEvents)
 
     ## Apply cM filter
     xoAllEvents <- .applyCMFilter(xoAllEvents, cmFilter)
@@ -780,7 +770,7 @@ xoDetect <- function(plinkFile,
     }
 
     ## Process families in parallel
-    xoList <- BiocParallel::bplapply(famIds, function(currentFamId) {
+    xoList <- bplapply(famIds, function(currentFamId) {
         .processSingleFamily(currentFamId, famSubset, genoMatrix, pedMap,
             geneticMap, parent, snpFilter,
             familySize = 3L
@@ -811,7 +801,7 @@ xoDetect <- function(plinkFile,
     xoAllEvents <- .addPositions(xoAllEvents, pedMap, geneticMap)
 
     ## Remove duplicates
-    xoAllEvents <- dplyr::distinct(xoAllEvents)
+    xoAllEvents <- distinct(xoAllEvents)
 
     ## Apply cM filter
     xoAllEvents <- .applyCMFilter(xoAllEvents, cmFilter)

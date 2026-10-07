@@ -68,15 +68,6 @@
 #' Parallel processing is performed by individual, improving efficiency for datasets
 #' with many samples.
 #'
-#' @import methods
-#' @importFrom snpStats read.plink
-#' @importFrom S4Vectors DataFrame
-#' @importFrom GenomicRanges GRanges GRangesList makeGRangesFromDataFrame
-#' @importFrom IRanges IRanges
-#' @importFrom utils read.delim
-#' @importFrom BiocParallel SerialParam MulticoreParam bplapply
-#' @importFrom stats setNames
-#'
 #' @examples
 #' # Serial execution (default)
 #'
@@ -172,14 +163,14 @@ hzRun <- function(plinkFile,
     plinkFile <- sub("\\.(bed|bim|fam)$", "", plinkFile, ignore.case = TRUE)
 
     ## Read PLINK data
-    pedData <- snpStats::read.plink(plinkFile)
+    pedData <- read.plink(plinkFile)
 
     ## Convert SnpMatrix to numeric matrix
     ## as(object, "numeric") gives 0, 1, 2 for genotype counts, NA for missing
     genoSnpMat <- pedData$genotypes
     if (inherits(genoSnpMat, "SnpMatrix")) {
         ## Convert to numeric: 0=AA, 1=AB, 2=BB, NA=missing
-        genoNumeric <- methods::as(genoSnpMat, "numeric")
+        genoNumeric <- as(genoSnpMat, "numeric")
         ## Transpose so SNPs are rows, samples are columns
         genoMatrix <- t(genoNumeric)
     } else {
@@ -201,7 +192,7 @@ hzRun <- function(plinkFile,
             stop("Genetic map file not found: ", mapFile)
         }
 
-        geneticMapDf <- utils::read.delim(mapFile, stringsAsFactors = FALSE)
+        geneticMapDf <- read.delim(mapFile, stringsAsFactors = FALSE)
 
         if (!all(c("chr", "pos", "cM") %in% colnames(geneticMapDf))) {
             stop("mapFile must have columns: chr, pos, cM")
@@ -560,7 +551,7 @@ hzRun <- function(plinkFile,
     sampleIds <- colnames(genoMatrix)
 
     ## Process all samples in parallel
-    rohList <- BiocParallel::bplapply(seq_len(numSamples), function(i) {
+    rohList <- bplapply(seq_len(numSamples), function(i) {
         .processSingleIndividual(
             sampleIdx = i,
             genoMatrix = genoMatrix,
