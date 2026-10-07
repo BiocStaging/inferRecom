@@ -168,16 +168,6 @@ hzRun <- function(plinkFile,
         stop("'caseControl' must be a single logical value")
     }
 
-    ## Check required packages
-    pkgs <- c("snpStats", "BiocParallel")
-    miss <- pkgs[!vapply(pkgs, requireNamespace,
-        quietly = TRUE,
-        FUN.VALUE = logical(1)
-    )]
-    if (length(miss) > 0L) {
-        stop("Missing required packages: ", paste(miss, collapse = ", "))
-    }
-
     ## Strip extension from plinkFile if present
     plinkFile <- sub("\\.(bed|bim|fam)$", "", plinkFile, ignore.case = TRUE)
 

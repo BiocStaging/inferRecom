@@ -163,21 +163,6 @@ xoPhase <- function(plinkFile,
         stop("'vcfOutput' must be a single character string")
     }
 
-    ## Check required packages
-    pkgs <- c("snpStats", "GenomicRanges", "BiocParallel")
-    miss <- pkgs[!vapply(pkgs, requireNamespace,
-        quietly = TRUE,
-        FUN.VALUE = logical(1)
-    )]
-    if (length(miss) > 0L) {
-        stop("Missing required packages: ", paste(miss, collapse = ", "))
-    }
-
-    if (outputFormat == "summarizedExperiment" &&
-        !requireNamespace("SummarizedExperiment", quietly = TRUE)) {
-        stop("Package 'SummarizedExperiment' is required for this output format")
-    }
-
     if (!.checkSameChromosome(xoDetectMaternal) | !.checkSameChromosome(xoDetectPaternal)) {
         stop("GRanges object can only contain ranges from a single chromosome")
     }
@@ -1487,10 +1472,6 @@ xoPhase <- function(plinkFile,
 #' @return data.frame with genomic ranges information and metadata columns
 #' @keywords internal
 .granges2DataFrame <- function(granges) {
-    if (!requireNamespace("GenomicRanges", quietly = TRUE)) {
-        stop("Package 'GenomicRanges' is required")
-    }
-
     if (!is(granges, "GRanges")) {
         stop("Input must be a GRanges object")
     }

@@ -163,16 +163,6 @@ xoDetect <- function(plinkFile,
         stop("No case-control separation for 2-child families")
     }
 
-    ## Dependency checks
-    pkgs <- c("snpStats", "S4Vectors", "GenomicRanges", "IRanges", "dplyr", "BiocParallel")
-    miss <- pkgs[!vapply(pkgs, requireNamespace,
-        quietly = TRUE,
-        FUN.VALUE = logical(1)
-    )]
-    if (length(miss) > 0L) {
-        stop("Missing required packages: ", paste(miss, collapse = ", "))
-    }
-
     ## Strip extension from plinkFile if present
     plinkFile <- sub("\\.(bed|bim|fam)$", "", plinkFile, ignore.case = TRUE)
 
