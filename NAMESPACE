@@ -19,7 +19,10 @@ importFrom(GenomicRanges,
   strand,
   width
 )
-importFrom(S4Vectors,DataFrame)
+importFrom(S4Vectors,
+  DataFrame,
+  split
+)
 importFrom(SummarizedExperiment,SummarizedExperiment)
 importFrom(dplyr,distinct)
 importFrom(methods,

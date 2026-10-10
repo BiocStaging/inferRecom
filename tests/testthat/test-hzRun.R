@@ -90,7 +90,8 @@ test_that("hzRun handles case/control split", {
         caseControl = TRUE
     )
 
-    # Should have "case" and "control" elements
+    # Should be a GRangesList with "case" and "control" elements
+    expect_s4_class(testResult, "GRangesList")
     expect_true("case" %in% names(testResult))
     expect_true("control" %in% names(testResult))
 

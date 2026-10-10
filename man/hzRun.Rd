@@ -52,7 +52,7 @@ Default is \code{SerialParam()} for serial execution. Use
 A \link[GenomicRanges:GRanges-class]{GRanges} object containing detected ROH with metadata
 columns: \code{sampleId}, \code{startSnp}, \code{finishSnp}, \code{numSnps}.
 If genetic map is provided, also includes \code{startCm}, \code{finishCm}.
-If \code{caseControl = TRUE}, returns a \link[GenomicRanges:GRangesList-class]{GRanges} with
+If \code{caseControl = TRUE}, returns a \link[GenomicRanges:GRangesList-class]{GRangesList} with
 two elements: \code{case} and \code{control}. Returns an empty
 \link[GenomicRanges:GRanges-class]{GRanges} if no ROH are detected.
 }
