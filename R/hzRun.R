@@ -238,98 +238,53 @@ hzRun <- function(plinkFile,
         BPPARAM
     )
 
-    ## Convert to DataFrame
+    ## Return empty GRanges or GRangesList if no ROH were detected
     if (length(rohList) == 0L) {
-        ## Create empty DataFrame with appropriate columns
-        if (!is.null(geneticMap)) {
-            resultDf <- DataFrame(
-                sampleId = character(),
-                startSnp = character(),
-                finishSnp = character(),
-                numSnps = integer(),
-                startPos = numeric(),
-                finishPos = numeric(),
-                startCm = numeric(),
-                finishCm = numeric(),
-                chromosome = character()
-            )
-        } else {
-            resultDf <- DataFrame(
-                sampleId = character(),
-                startSnp = character(),
-                finishSnp = character(),
-                numSnps = integer(),
-                startPos = numeric(),
-                finishPos = numeric(),
-                chromosome = character()
-            )
+        if (caseControl) {
+            return(GRangesList(case = GRanges(), control = GRanges()))
         }
-    } else {
-        rohMat <- do.call(rbind, rohList)
-
-        if (!is.null(geneticMap)) {
-            resultDf <- DataFrame(
-                sampleId = rohMat[, 1],
-                startSnp = rohMat[, 2],
-                finishSnp = rohMat[, 3],
-                numSnps = as.integer(rohMat[, 4]),
-                startPos = as.numeric(rohMat[, 5]),
-                finishPos = as.numeric(rohMat[, 6]),
-                startCm = as.numeric(rohMat[, 7]),
-                finishCm = as.numeric(rohMat[, 8]),
-                chromosome = mapData$chromosome[1]
-            )
-        } else {
-            resultDf <- DataFrame(
-                sampleId = rohMat[, 1],
-                startSnp = rohMat[, 2],
-                finishSnp = rohMat[, 3],
-                numSnps = as.integer(rohMat[, 4]),
-                startPos = as.numeric(rohMat[, 5]),
-                finishPos = as.numeric(rohMat[, 6]),
-                chromosome = mapData$chromosome[1]
-            )
-        }
+        return(GRanges())
     }
 
-    ## Convert to GRanges or GRangesList
-    if (nrow(resultDf) > 0L) {
-        if (caseControl == FALSE) {
-            # Convert to GRanges
-            grResult <- makeGRangesFromDataFrame(
-                df = resultDf,
-                seqnames.field = "chromosome",
-                start.field = "startPos",
-                end.field = "finishPos",
-                keep.extra.columns = TRUE
-            )
-        } else {
-            # Add case/control status
-            affectedIds <- famData$member[famData$affected == 1]
-            resultDf$caseStatus <- ifelse(resultDf$sampleId %in% affectedIds,
-                "case",
-                "control"
-            )
+    ## Build DataFrame with the columns common to all outputs
+    rohMat <- do.call(rbind, rohList)
+    resultDf <- DataFrame(
+        sampleId = rohMat[, 1],
+        startSnp = rohMat[, 2],
+        finishSnp = rohMat[, 3],
+        numSnps = as.integer(rohMat[, 4]),
+        startPos = as.numeric(rohMat[, 5]),
+        finishPos = as.numeric(rohMat[, 6]),
+        chromosome = mapData$chromosome[1]
+    )
 
-            # Convert to GRanges initially
-            grTemp <- makeGRangesFromDataFrame(
-                df = resultDf,
-                seqnames.field = "chromosome",
-                start.field = "startPos",
-                end.field = "finishPos",
-                keep.extra.columns = TRUE
-            )
+    ## Add genetic positions if a map was provided
+    if (!is.null(geneticMap)) {
+        resultDf$startCm <- as.numeric(rohMat[, 7])
+        resultDf$finishCm <- as.numeric(rohMat[, 8])
+    }
 
-            # Split into GRangesList by case/control status
-            grResult <- split(grTemp, grTemp$caseStatus)
-        }
-    } else {
-        # Return empty GRanges or GRangesList
-        if (caseControl == FALSE) {
-            grResult <- GRanges()
-        } else {
-            grResult <- GRangesList(case = GRanges(), control = GRanges())
-        }
+    ## Add case/control status if requested
+    if (caseControl) {
+        affectedIds <- famData$member[famData$affected == 1]
+        resultDf$caseStatus <- ifelse(resultDf$sampleId %in% affectedIds,
+            "case",
+            "control"
+        )
+    }
+
+    ## Convert to GRanges
+    grResult <- makeGRangesFromDataFrame(
+        df = resultDf,
+        seqnames.field = "chromosome",
+        start.field = "startPos",
+        end.field = "finishPos",
+        keep.extra.columns = TRUE
+    )
+
+    ## Split into GRangesList by case/control status
+    if (caseControl) {
+        grResult <- split(grResult, grResult$caseStatus)
     }
 
     grResult
