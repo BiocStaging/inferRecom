@@ -162,50 +162,10 @@ xoDetect <- function(plinkFile,
         message("Results written to: ", out)
     }
 
-    ## Convert to appropriate GRanges object or list
-    if (nrow(resDf) > 0L) {
-        # Add chromosome information
-        resDf$chromosome <- mapDf$chr[1]
-
-        if (caseControl == FALSE) {
-            # Convert to GRanges
-            grResult <- makeGRangesFromDataFrame(
-                df = resDf,
-                seqnames.field = "chromosome",
-                start.field = "startPos",
-                end.field = "finishPos",
-                keep.extra.columns = TRUE
-            )
-        } else {
-            # Add case/control status
-            affectedIds <- famData$member[famData$affected == 1]
-            resDf$caseStatus <- ifelse(resDf$childId %in% affectedIds,
-                "case",
-                "control"
-            )
-
-            # Convert to GRanges first
-            grTemp <- makeGRangesFromDataFrame(
-                df = resDf,
-                seqnames.field = "chromosome",
-                start.field = "startPos",
-                end.field = "finishPos",
-                keep.extra.columns = TRUE
-            )
-
-            # Split into GRangesList by case/control status
-            grResult <- split(grTemp, grTemp$caseStatus)
-        }
-    } else {
-        # Return empty GRanges or GRangesList
-        if (caseControl == FALSE) {
-            grResult <- GRanges()
-        } else {
-            grResult <- GRangesList(case = GRanges(), control = GRanges())
-        }
-    }
-
-    grResult
+    ## Convert to GRanges, split by case/control status if requested
+    .asGRangesResult(resDf, mapDf$chr[1], caseControl, famData,
+        idCol = "childId"
+    )
 }
 
 

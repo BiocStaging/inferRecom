@@ -196,10 +196,7 @@ hzRun <- function(plinkFile,
 
     ## Return empty GRanges or GRangesList if no ROH were detected
     if (length(rohList) == 0L) {
-        if (caseControl) {
-            return(GRangesList(case = GRanges(), control = GRanges()))
-        }
-        return(GRanges())
+        return(.emptyGRangesResult(caseControl))
     }
 
     ## Build DataFrame with the columns common to all outputs
@@ -210,8 +207,7 @@ hzRun <- function(plinkFile,
         finishSnp = rohMat[, 3],
         numSnps = as.integer(rohMat[, 4]),
         startPos = as.numeric(rohMat[, 5]),
-        finishPos = as.numeric(rohMat[, 6]),
-        chromosome = mapData$chromosome[1]
+        finishPos = as.numeric(rohMat[, 6])
     )
 
     ## Add genetic positions if a map was provided
@@ -220,30 +216,10 @@ hzRun <- function(plinkFile,
         resultDf$finishCm <- as.numeric(rohMat[, 8])
     }
 
-    ## Add case/control status if requested
-    if (caseControl) {
-        affectedIds <- famData$member[famData$affected == 1]
-        resultDf$caseStatus <- ifelse(resultDf$sampleId %in% affectedIds,
-            "case",
-            "control"
-        )
-    }
-
-    ## Convert to GRanges
-    grResult <- makeGRangesFromDataFrame(
-        df = resultDf,
-        seqnames.field = "chromosome",
-        start.field = "startPos",
-        end.field = "finishPos",
-        keep.extra.columns = TRUE
+    ## Convert to GRanges, split by case/control status if requested
+    .asGRangesResult(resultDf, mapData$chromosome[1], caseControl, famData,
+        idCol = "sampleId"
     )
-
-    ## Split into GRangesList by case/control status
-    if (caseControl) {
-        grResult <- split(grResult, grResult$caseStatus)
-    }
-
-    grResult
 }
 
 

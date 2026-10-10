@@ -51,3 +51,46 @@
 
     mapDf[, c("chr", "pos", "cM")]
 }
+
+## Convert a results DataFrame with startPos and finishPos columns to GRanges
+## on the given chromosome. If caseControl is TRUE, split into a GRangesList
+## with "case" and "control" elements, using the affected status in famData of
+## the samples named in column idCol.
+.asGRangesResult <- function(resultDf, chromosome, caseControl, famData,
+                             idCol) {
+    if (nrow(resultDf) == 0L) {
+        return(.emptyGRangesResult(caseControl))
+    }
+
+    resultDf$chromosome <- chromosome
+
+    if (caseControl) {
+        affectedIds <- famData$member[famData$affected == 1]
+        resultDf$caseStatus <- ifelse(resultDf[[idCol]] %in% affectedIds,
+            "case",
+            "control"
+        )
+    }
+
+    grResult <- makeGRangesFromDataFrame(
+        df = resultDf,
+        seqnames.field = "chromosome",
+        start.field = "startPos",
+        end.field = "finishPos",
+        keep.extra.columns = TRUE
+    )
+
+    if (caseControl) {
+        grResult <- split(grResult, grResult$caseStatus)
+    }
+
+    grResult
+}
+
+## Empty result in the same form as .asGRangesResult()
+.emptyGRangesResult <- function(caseControl) {
+    if (caseControl) {
+        return(GRangesList(case = GRanges(), control = GRanges()))
+    }
+    GRanges()
+}
