@@ -110,20 +110,8 @@ xoDetect <- function(plinkFile,
     parent <- match.arg(parent)
     familySize <- as.integer(match.arg(as.character(familySize), c("2", "3")))
 
-    bedFile <- paste0(plinkFile, ".bed")
-    bimFile <- paste0(plinkFile, ".bim")
-    famFile <- paste0(plinkFile, ".fam")
-
-    missingFiles <- character()
-    if (!file.exists(bedFile)) {
-        missingFiles <- c(missingFiles, bedFile)
-    }
-    if (!file.exists(bimFile)) {
-        missingFiles <- c(missingFiles, bimFile)
-    }
-    if (!file.exists(famFile)) {
-        missingFiles <- c(missingFiles, famFile)
-    }
+    searchFiles <- sprintf("%s.%s", plinkFile, c("bed", "bim", "fam"))
+    missingFiles <- searchFiles[!file.exists(searchFiles)]
 
     if (length(missingFiles) > 0L) {
         stop("PLINK file(s) not found: ", paste(missingFiles, collapse = ", "))
