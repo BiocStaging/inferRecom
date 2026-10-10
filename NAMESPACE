@@ -38,7 +38,10 @@ importFrom(methods,
   is
 )
 importFrom(snpStats,read.plink)
-importFrom(stats,setNames)
+importFrom(stats,
+  setNames,
+  var
+)
 importFrom(tools,
   file_ext,
   file_path_sans_ext
