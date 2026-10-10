@@ -62,7 +62,7 @@
         return(.emptyGRangesResult(caseControl))
     }
 
-    resultDf$chromosome <- chromosome
+    resultDf$chromosome <- .ucscChromosome(chromosome)
 
     if (caseControl) {
         affectedIds <- famData$member[famData$affected == 1]
@@ -85,6 +85,16 @@
     }
 
     grResult
+}
+
+## UCSC-style chromosome names ("chr4", "chrX", "chrM") from PLINK or UCSC
+## names. PLINK codes chromosomes X, Y and MT as 23, 24 and 26.
+.ucscChromosome <- function(chromosome) {
+    chromosome <- sub("^chr", "", as.character(chromosome), ignore.case = TRUE)
+    plinkCodes <- c("23" = "X", "24" = "Y", "26" = "M", "MT" = "M")
+    recode <- chromosome %in% names(plinkCodes)
+    chromosome[recode] <- plinkCodes[chromosome[recode]]
+    paste0("chr", chromosome, recycle0 = TRUE)
 }
 
 ## Empty result in the same form as .asGRangesResult()

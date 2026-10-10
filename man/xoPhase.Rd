@@ -43,8 +43,9 @@ children the first allele is paternal and the second maternal; for
 parents the alleles are the two phased haplotypes. \code{colData}
 holds \code{familyId}, \code{fatherId}, \code{motherId}, \code{sex}
 and \code{affected} from the FAM file. Families without phase
-information are omitted with a message. Use
-\code{VariantAnnotation::writeVcf()} to write the result to a file.
+information are omitted with a message. Chromosome names use the UCSC
+style (e.g. \code{chr4}). Use \code{VariantAnnotation::writeVcf()} to
+write the result to a file.
 }
 \description{
 This function phases parental and child haplotypes based on detected

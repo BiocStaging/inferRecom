@@ -31,6 +31,7 @@
 #'     crossover intervals with metadata columns: \code{childId} (in 3-child
 #'     families), \code{familyId}, \code{startSnp}, \code{finishSnp},
 #'     \code{startPos}, \code{finishPos}, \code{startCm}, \code{finishCm}.
+#'     Chromosome names use the UCSC style (e.g. \code{chr4}).
 #'
 #' @details
 #' This function reads PLINK genotype data (via \pkg{snpStats}) and infers

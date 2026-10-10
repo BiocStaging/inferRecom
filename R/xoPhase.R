@@ -26,8 +26,9 @@
 #'     parents the alleles are the two phased haplotypes. \code{colData}
 #'     holds \code{familyId}, \code{fatherId}, \code{motherId}, \code{sex}
 #'     and \code{affected} from the FAM file. Families without phase
-#'     information are omitted with a message. Use
-#'     \code{VariantAnnotation::writeVcf()} to write the result to a file.
+#'     information are omitted with a message. Chromosome names use the UCSC
+#'     style (e.g. \code{chr4}). Use \code{VariantAnnotation::writeVcf()} to
+#'     write the result to a file.
 #'
 #' @details
 #' This function performs haplotype phasing using family-based genetic data
@@ -1223,7 +1224,7 @@ xoPhase <- function(plinkFile,
 
     ## SNP positions and alleles; PLINK codes a missing allele as "0"
     snpRanges <- GRanges(
-        seqnames = as.character(bim$chr[bimIdx]),
+        seqnames = .ucscChromosome(bim$chr[bimIdx]),
         ranges = IRanges(bim$pos[bimIdx], width = 1L, names = snps)
     )
     altList <- DNAStringSetList(lapply(alt, function(a) {

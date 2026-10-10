@@ -55,6 +55,7 @@ If genetic map is provided, also includes \code{startCm}, \code{finishCm}.
 If \code{caseControl = TRUE}, returns a \link[GenomicRanges:GRangesList-class]{GRangesList} with
 two elements: \code{case} and \code{control}. Returns an empty
 \link[GenomicRanges:GRanges-class]{GRanges} if no ROH are detected.
+Chromosome names use the UCSC style (e.g. \code{chr4}).
 }
 \description{
 This function identifies runs of homozygosity (ROH) in PLINK genotype data

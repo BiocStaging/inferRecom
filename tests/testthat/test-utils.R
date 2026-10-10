@@ -54,6 +54,27 @@ test_that(".asGRangesResult builds GRanges and splits by case/control", {
     expect_equal(grl$control$childId, "C2")
 })
 
+test_that(".asGRangesResult uses UCSC-style chromosome names", {
+    resultDf <- DataFrame(sampleId = "S1", startPos = 100, finishPos = 150)
+
+    seqNames <- vapply(list(4L, "4", "chr4", "CHR4"), function(chromosome) {
+        gr <- inferRecom:::.asGRangesResult(resultDf, chromosome, FALSE, NULL,
+            idCol = "sampleId"
+        )
+        as.character(seqnames(gr))
+    }, character(1))
+
+    expect_equal(seqNames, rep("chr4", 4))
+})
+
+test_that(".ucscChromosome converts PLINK chromosome codes", {
+    expect_equal(
+        inferRecom:::.ucscChromosome(c("1", "chr22", "23", "X", "24", "26", "MT")),
+        c("chr1", "chr22", "chrX", "chrX", "chrY", "chrM", "chrM")
+    )
+    expect_equal(inferRecom:::.ucscChromosome(character()), character())
+})
+
 test_that(".asGRangesResult returns empty results of the same type", {
     emptyDf <- DataFrame(startPos = numeric(), finishPos = numeric())
 
