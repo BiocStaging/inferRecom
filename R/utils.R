@@ -36,3 +36,18 @@
 
     list(geno = geno, map = pedData$map, fam = pedData$fam)
 }
+
+## Read a tab-delimited genetic map and return its chr, pos and cM columns
+.readGeneticMap <- function(mapFile) {
+    if (!file.exists(mapFile)) {
+        stop("Genetic map file not found: ", mapFile)
+    }
+
+    mapDf <- read.delim(mapFile, stringsAsFactors = FALSE)
+
+    if (!all(c("chr", "pos", "cM") %in% colnames(mapDf))) {
+        stop("mapFile must have columns: chr, pos, cM")
+    }
+
+    mapDf[, c("chr", "pos", "cM")]
+}

@@ -110,10 +110,6 @@ xoDetect <- function(plinkFile,
     parent <- match.arg(parent)
     familySize <- as.integer(match.arg(as.character(familySize), c("2", "3")))
 
-    if (!file.exists(mapFile)) {
-        stop("Genetic map file not found: ", mapFile)
-    }
-
     if (!is.null(out) && !is.character(out)) {
         stop("'out' must be a character string or NULL")
     }
@@ -136,11 +132,7 @@ xoDetect <- function(plinkFile,
 
     ## Read PLINK data
     pedData <- .readPlinkGenotypes(plinkFile, rsOnly)
-    mapDf <- read.delim(mapFile, stringsAsFactors = FALSE)
-
-    if (!all(c("chr", "pos", "cM") %in% colnames(mapDf))) {
-        stop("mapFile must have columns: chr, pos, cM")
-    }
+    mapDf <- .readGeneticMap(mapFile)
 
     ## Recode genotypes as 0 (missing), 1, 2, 3 for crossover detection
     genoMatrix <- pedData$geno + 1

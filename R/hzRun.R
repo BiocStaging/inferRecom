@@ -168,22 +168,7 @@ hzRun <- function(plinkFile,
     ## Read genetic map if provided
     geneticMap <- NULL
     if (!is.null(mapFile)) {
-        if (!file.exists(mapFile)) {
-            stop("Genetic map file not found: ", mapFile)
-        }
-
-        geneticMapDf <- read.delim(mapFile, stringsAsFactors = FALSE)
-
-        if (!all(c("chr", "pos", "cM") %in% colnames(geneticMapDf))) {
-            stop("mapFile must have columns: chr, pos, cM")
-        }
-
-        geneticMap <- data.frame(
-            chr = geneticMapDf$chr,
-            pos = geneticMapDf$pos,
-            cM = geneticMapDf$cM,
-            stringsAsFactors = FALSE
-        )
+        geneticMap <- .readGeneticMap(mapFile)
     }
 
     ## Filter for specific IDs if provided
