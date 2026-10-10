@@ -132,18 +132,11 @@ xoDetect <- function(plinkFile,
 
     famData <- pedData$fam
 
-    ## Dispatch to appropriate helper function
-    if (familySize == 3L) {
-        resDf <- .xoDetectThreeChild(
-            pedData, genoMatrix, famData, mapDf, parent,
-            snpFilter, cmFilter, BPPARAM
-        )
-    } else {
-        resDf <- .xoDetectTwoChild(
-            pedData, genoMatrix, famData, mapDf, parent,
-            snpFilter, cmFilter, BPPARAM
-        )
-    }
+    ## Detect crossovers in all families of the requested size
+    resDf <- .xoDetectFamilies(
+        pedData, genoMatrix, famData, mapDf, parent,
+        snpFilter, cmFilter, familySize, BPPARAM
+    )
 
     ## Write output if requested
     if (!is.null(out) && nrow(resDf) > 0L) {
@@ -576,152 +569,67 @@ xoDetect <- function(plinkFile,
 }
 
 
-## ---------------- Two-child families (with parallel support) ----------------
+## ---------------- All families of one size (with parallel support) ----------
 
-.xoDetectTwoChild <- function(pedData, genoMatrix, famData, geneticMap, parent,
-                              snpFilter, cmFilter, BPPARAM) {
-    ## Identify families with exactly 4 members (2 parents + 2 children)
+## Detect crossovers in all families with exactly two children (familySize 2,
+## 4 members) or with three or more children (familySize 3, 5+ members)
+.xoDetectFamilies <- function(pedData, genoMatrix, famData, geneticMap, parent,
+                              snpFilter, cmFilter, familySize, BPPARAM) {
+    ## Identify families of the requested size (2 parents + children)
     famCounts <- table(famData[, 1])
-    famKeep <- names(famCounts)[famCounts == 4]
+    famKeep <- if (familySize == 2L) {
+        names(famCounts)[famCounts == 4]
+    } else {
+        names(famCounts)[famCounts >= 5]
+    }
     famSubset <- famData[famData[, 1] %in% famKeep, , drop = FALSE]
     famIds <- unique(famSubset[, 1])
     pedMap <- pedData$map
-
-    if (length(famIds) == 0L) {
-        return(DataFrame(
-            familyId = character(),
-            startSnp = character(),
-            finishSnp = character(),
-            startPos = numeric(),
-            finishPos = numeric(),
-            startCm = numeric(),
-            finishCm = numeric()
-        ))
-    }
 
     ## Process families in parallel
     xoList <- bplapply(famIds, function(currentFamId) {
         .processSingleFamily(currentFamId, famSubset, genoMatrix, pedMap,
             geneticMap, parent, snpFilter,
-            familySize = 2L
+            familySize = familySize
         )
     }, BPPARAM = BPPARAM)
 
     ## Remove NULL results
     xoList <- xoList[!vapply(xoList, is.null, logical(1))]
 
-    ## Combine results
     if (length(xoList) == 0L) {
-        return(DataFrame(
-            familyId = character(),
-            startSnp = character(),
-            finishSnp = character(),
-            startPos = numeric(),
-            finishPos = numeric(),
-            startCm = numeric(),
-            finishCm = numeric()
-        ))
+        return(.xoResultDataFrame(data.frame(), familySize))
     }
 
     xoAllEvents <- do.call(rbind, xoList)
     xoAllEvents <- as.data.frame(xoAllEvents, stringsAsFactors = FALSE)
 
-    ## Add positions
+    ## Add positions, remove duplicates and apply cM filter
     xoAllEvents <- .addPositions(xoAllEvents, pedMap, geneticMap)
-
-    ## Remove duplicates
     xoAllEvents <- distinct(xoAllEvents)
-
-    ## Apply cM filter
     xoAllEvents <- .applyCMFilter(xoAllEvents, cmFilter)
 
-    ## Convert to DataFrame
-    resultDf <- DataFrame(
-        familyId = xoAllEvents$familyId,
-        startSnp = xoAllEvents$startSnp,
-        finishSnp = xoAllEvents$finishSnp,
-        startPos = as.numeric(xoAllEvents$startPos),
-        finishPos = as.numeric(xoAllEvents$finishPos),
-        startCm = as.numeric(xoAllEvents$startCm),
-        finishCm = as.numeric(xoAllEvents$finishCm)
-    )
-
-    resultDf
+    .xoResultDataFrame(xoAllEvents, familySize)
 }
 
-
-## ---------------- Three-child families (with parallel support) ----------------
-
-.xoDetectThreeChild <- function(pedData, genoMatrix, famData, geneticMap, parent,
-                                snpFilter, cmFilter, BPPARAM) {
-    ## Identify families with 5+ members (2 parents + 3+ children)
-    famCounts <- table(famData[, 1])
-    famKeep <- names(famCounts)[famCounts >= 5]
-    famSubset <- famData[famData[, 1] %in% famKeep, , drop = FALSE]
-    famIds <- unique(famSubset[, 1])
-    pedMap <- pedData$map
-
-    if (length(famIds) == 0L) {
-        return(DataFrame(
-            childId = character(),
-            familyId = character(),
-            startSnp = character(),
-            finishSnp = character(),
-            startPos = numeric(),
-            finishPos = numeric(),
-            startCm = numeric(),
-            finishCm = numeric()
-        ))
-    }
-
-    ## Process families in parallel
-    xoList <- bplapply(famIds, function(currentFamId) {
-        .processSingleFamily(currentFamId, famSubset, genoMatrix, pedMap,
-            geneticMap, parent, snpFilter,
-            familySize = 3L
-        )
-    }, BPPARAM = BPPARAM)
-
-    ## Remove NULL results
-    xoList <- xoList[!vapply(xoList, is.null, logical(1))]
-
-    ## Combine results
-    if (length(xoList) == 0L) {
-        return(DataFrame(
-            childId = character(),
-            familyId = character(),
-            startSnp = character(),
-            finishSnp = character(),
-            startPos = numeric(),
-            finishPos = numeric(),
-            startCm = numeric(),
-            finishCm = numeric()
-        ))
-    }
-
-    xoAllEvents <- do.call(rbind, xoList)
-    xoAllEvents <- as.data.frame(xoAllEvents, stringsAsFactors = FALSE)
-
-    ## Add positions
-    xoAllEvents <- .addPositions(xoAllEvents, pedMap, geneticMap)
-
-    ## Remove duplicates
-    xoAllEvents <- distinct(xoAllEvents)
-
-    ## Apply cM filter
-    xoAllEvents <- .applyCMFilter(xoAllEvents, cmFilter)
-
-    ## Convert to DataFrame
+## Crossover results as a DataFrame, one row per event. The recombinant child
+## (childId) can only be identified in families with three or more children.
+.xoResultDataFrame <- function(xoEvents, familySize) {
     resultDf <- DataFrame(
-        childId = xoAllEvents$childId,
-        familyId = xoAllEvents$familyId,
-        startSnp = xoAllEvents$startSnp,
-        finishSnp = xoAllEvents$finishSnp,
-        startPos = as.numeric(xoAllEvents$startPos),
-        finishPos = as.numeric(xoAllEvents$finishPos),
-        startCm = as.numeric(xoAllEvents$startCm),
-        finishCm = as.numeric(xoAllEvents$finishCm)
+        familyId = as.character(xoEvents$familyId),
+        startSnp = as.character(xoEvents$startSnp),
+        finishSnp = as.character(xoEvents$finishSnp),
+        startPos = as.numeric(xoEvents$startPos),
+        finishPos = as.numeric(xoEvents$finishPos),
+        startCm = as.numeric(xoEvents$startCm),
+        finishCm = as.numeric(xoEvents$finishCm)
     )
+
+    if (familySize == 3L) {
+        resultDf <- cbind(
+            DataFrame(childId = as.character(xoEvents$childId)), resultDf
+        )
+    }
 
     resultDf
 }
