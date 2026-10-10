@@ -184,325 +184,229 @@ test_that("xoPhase rejects mixed chromosomes", {
 ## Basic Functionality Tests
 ## ============================================================================
 
-test_that("xoPhase returns list output format", {
+loadXo <- function(testData) {
+    dataPath <- dirname(testData$plinkFile)
+    list(
+        pat = readRDS(file.path(dataPath, "xoPat.rds")),
+        mat = readRDS(file.path(dataPath, "xoMat.rds"))
+    )
+}
+
+test_that("xoPhase returns a VCF object", {
     skip_if_not(checkTestData(), "Test data not available")
 
     testData <- loadSimCeuData()
-
-    # Load crossover data
-    xoPat <- readRDS(file.path(dirname(testData$plinkFile), "xoPat.rds"))
-    xoMat <- readRDS(file.path(dirname(testData$plinkFile), "xoMat.rds"))
+    xo <- loadXo(testData)
 
     testResult <- xoPhase(
         plinkFile = testData$plinkFile,
-        xoDetectPaternal = xoPat,
-        xoDetectMaternal = xoMat,
-        outputFormat = "list"
+        xoDetectPaternal = xo$pat,
+        xoDetectMaternal = xo$mat
     )
 
-    # Check return type
-    expect_type(testResult, "list")
-    expect_true(length(testResult) > 0)
-    expect_true(!is.null(names(testResult)))
+    expect_s4_class(testResult, "VCF")
+    expect_true(nrow(testResult) > 0)
+    expect_true(ncol(testResult) > 0)
+    expect_true("GT" %in% names(geno(testResult)))
+    expect_equal(
+        colnames(colData(testResult)),
+        c("familyId", "fatherId", "motherId", "sex", "affected")
+    )
 
-    # Check first family
-    firstFamily <- testResult[[1]]
-
-    if (is(firstFamily, "DataFrame") || is.data.frame(firstFamily)) {
-        # Check required columns
-        expect_true("rsID" %in% colnames(firstFamily))
-        expect_true("location" %in% colnames(firstFamily))
-
-        # Check for child haplotype columns (ending in Pat/Mat)
-        childCols <- grep("(Pat|Mat)$", colnames(firstFamily), value = TRUE)
-        expect_true(length(childCols) > 0)
-
-        # Check for parent haplotype columns (ending in _1/_2)
-        parentCols <- grep("_[12]$", colnames(firstFamily), value = TRUE)
-        expect_true(length(parentCols) > 0)
-    }
+    # Every genotype is phased and coded 0 (REF), 1 (ALT) or . (unknown)
+    expect_true(all(grepl("^[01.]\\|[01.]$", geno(testResult)$GT)))
 })
 
 test_that("xoPhase phases multiple families", {
     skip_if_not(checkTestData(), "Test data not available")
 
     testData <- loadSimCeuData()
-    xoPat <- readRDS(file.path(dirname(testData$plinkFile), "xoPat.rds"))
-    xoMat <- readRDS(file.path(dirname(testData$plinkFile), "xoMat.rds"))
+    xo <- loadXo(testData)
 
     testResult <- xoPhase(
         plinkFile = testData$plinkFile,
-        xoDetectPaternal = xoPat,
-        xoDetectMaternal = xoMat
+        xoDetectPaternal = xo$pat,
+        xoDetectMaternal = xo$mat
     )
 
-    # Should have multiple families
-    expect_true(length(testResult) >= 1)
-
-    # Each family should have unique ID
-    expect_equal(length(names(testResult)), length(unique(names(testResult))))
+    expect_true(length(unique(colData(testResult)$familyId)) > 1)
+    expect_equal(anyDuplicated(colnames(testResult)), 0L)
 })
 
 test_that("xoPhase handles specific family IDs", {
     skip_if_not(checkTestData(), "Test data not available")
 
     testData <- loadSimCeuData()
-    xoPat <- readRDS(file.path(dirname(testData$plinkFile), "xoPat.rds"))
-    xoMat <- readRDS(file.path(dirname(testData$plinkFile), "xoMat.rds"))
+    xo <- loadXo(testData)
 
-    # Get all families first
-    allFamilies <- xoPhase(
+    testResult <- xoPhase(
         plinkFile = testData$plinkFile,
-        xoDetectPaternal = xoPat,
-        xoDetectMaternal = xoMat
+        xoDetectPaternal = xo$pat,
+        xoDetectMaternal = xo$mat,
+        famIds = "F6"
     )
 
-    if (length(allFamilies) > 1) {
-        # Select specific family
-        targetFamily <- names(allFamilies)[1]
+    expect_equal(unique(colData(testResult)$familyId), "F6")
+})
 
+test_that("xoPhase omits families without phase information", {
+    skip_if_not(checkTestData(), "Test data not available")
+
+    testData <- loadSimCeuData()
+    xo <- loadXo(testData)
+
+    expect_message(
         testResult <- xoPhase(
             plinkFile = testData$plinkFile,
-            xoDetectPaternal = xoPat,
-            xoDetectMaternal = xoMat,
-            famIds = targetFamily
-        )
+            xoDetectPaternal = xo$pat,
+            xoDetectMaternal = xo$mat,
+            famIds = c("F6", "F99")
+        ),
+        "No phase information for families: F99"
+    )
+    expect_equal(unique(colData(testResult)$familyId), "F6")
 
-        expect_equal(length(testResult), 1)
-        expect_true(targetFamily %in% names(testResult))
-    }
+    # Still a VCF when no family can be phased
+    testResult <- suppressMessages(xoPhase(
+        plinkFile = testData$plinkFile,
+        xoDetectPaternal = xo$pat,
+        xoDetectMaternal = xo$mat,
+        famIds = "F99"
+    ))
+    expect_s4_class(testResult, "VCF")
+    expect_equal(ncol(testResult), 0L)
 })
 
 test_that("xoPhase filters rs SNPs correctly", {
     skip_if_not(checkTestData(), "Test data not available")
 
     testData <- loadSimCeuData()
-    xoPat <- readRDS(file.path(dirname(testData$plinkFile), "xoPat.rds"))
-    xoMat <- readRDS(file.path(dirname(testData$plinkFile), "xoMat.rds"))
+    xo <- loadXo(testData)
 
-    # With rsOnly = TRUE
     testResultRs <- xoPhase(
         plinkFile = testData$plinkFile,
-        xoDetectPaternal = xoPat,
-        xoDetectMaternal = xoMat,
+        xoDetectPaternal = xo$pat,
+        xoDetectMaternal = xo$mat,
         rsOnly = TRUE
     )
 
-    # With rsOnly = FALSE
     testResultAll <- xoPhase(
         plinkFile = testData$plinkFile,
-        xoDetectPaternal = xoPat,
-        xoDetectMaternal = xoMat,
+        xoDetectPaternal = xo$pat,
+        xoDetectMaternal = xo$mat,
         rsOnly = FALSE
     )
 
-    # Both should return lists
-    expect_type(testResultRs, "list")
-    expect_type(testResultAll, "list")
-
-    # Check that rs filtering works
-    if (length(testResultRs) > 0) {
-        firstFam <- testResultRs[[1]]
-        if (is(firstFam, "DataFrame") || is.data.frame(firstFam)) {
-            rsSnps <- grep("^rs", firstFam$rsID, value = TRUE)
-            expect_true(length(rsSnps) > 0)
-        }
-    }
+    expect_true(all(grepl("^rs", rownames(testResultRs))))
+    expect_true(nrow(testResultAll) >= nrow(testResultRs))
 })
 
 ## ============================================================================
 ## Output Format Tests
 ## ============================================================================
 
-test_that("xoPhase returns SummarizedExperiment format", {
+test_that("xoPhase output is a RangedSummarizedExperiment", {
     skip_if_not(checkTestData(), "Test data not available")
-    skip_if_not_installed("SummarizedExperiment")
 
     testData <- loadSimCeuData()
-    xoPat <- readRDS(file.path(dirname(testData$plinkFile), "xoPat.rds"))
-    xoMat <- readRDS(file.path(dirname(testData$plinkFile), "xoMat.rds"))
+    xo <- loadXo(testData)
 
     testResult <- xoPhase(
         plinkFile = testData$plinkFile,
-        xoDetectPaternal = xoPat,
-        xoDetectMaternal = xoMat,
-        outputFormat = "summarizedExperiment"
+        xoDetectPaternal = xo$pat,
+        xoDetectMaternal = xo$mat
     )
 
-    expect_s4_class(testResult, "SummarizedExperiment")
-
-    # Check assays
-    expect_true("phased" %in% names(assays(testResult)))
-
-    # Check rowData
-    rData <- rowData(testResult)
-    expect_true("snpId" %in% colnames(rData))
-
-    # Check colData
-    cData <- colData(testResult)
-    expect_true("sampleId" %in% colnames(cData))
-    expect_true("sampleType" %in% colnames(cData))
-    expect_true("familyId" %in% colnames(cData))
+    expect_s4_class(testResult, "RangedSummarizedExperiment")
+    expect_true(all(c("REF", "ALT") %in% colnames(mcols(rowRanges(testResult)))))
+    expect_true(all(width(rowRanges(testResult)) == 1L))
 })
 
-test_that("xoPhase writes VCF files", {
+test_that("xoPhase output can be written with writeVcf", {
     skip_if_not(checkTestData(), "Test data not available")
 
     testData <- loadSimCeuData()
-    xoPat <- readRDS(file.path(dirname(testData$plinkFile), "xoPat.rds"))
-    xoMat <- readRDS(file.path(dirname(testData$plinkFile), "xoMat.rds"))
+    xo <- loadXo(testData)
 
-    # Create temporary output directory
-    tempDir <- tempdir()
-    vcfPrefix <- file.path(tempDir, "test_phased")
-
-    testResult <- suppressMessages(
-        xoPhase(
-            plinkFile = testData$plinkFile,
-            xoDetectPaternal = xoPat,
-            xoDetectMaternal = xoMat,
-            outputFormat = "vcf",
-            vcfOutput = vcfPrefix
-        )
+    testResult <- xoPhase(
+        plinkFile = testData$plinkFile,
+        xoDetectPaternal = xo$pat,
+        xoDetectMaternal = xo$mat,
+        famIds = c("F4", "F6")
     )
 
-    # Check that VCF files were created
-    expect_type(testResult, "character")
-    expect_true(length(testResult) > 0)
+    vcfFile <- tempfile(fileext = ".vcf")
+    on.exit(unlink(vcfFile))
+    writeVcf(testResult, vcfFile)
 
-    # Check that files exist
-    for (vcfFile in testResult) {
-        expect_true(file.exists(vcfFile))
+    expect_true(any(grepl("^##fileformat=VCF", readLines(vcfFile, n = 1))))
 
-        # Check file has content
-        vcfContent <- readLines(vcfFile, n = 10)
-        expect_true(any(grepl("^##fileformat=VCF", vcfContent)))
-        expect_true(any(grepl("^#CHROM", vcfContent)))
-    }
-
-    # Clean up
-    unlink(testResult)
+    roundTrip <- readVcf(vcfFile)
+    expect_equal(colnames(roundTrip), colnames(testResult))
+    expect_equal(unname(geno(roundTrip)$GT), unname(geno(testResult)$GT))
 })
 
 ## ============================================================================
 ## Phasing Quality Tests
 ## ============================================================================
 
-test_that("xoPhase produces valid haplotypes", {
+test_that("xoPhase produces SNPs in genomic order", {
     skip_if_not(checkTestData(), "Test data not available")
 
     testData <- loadSimCeuData()
-    xoPat <- readRDS(file.path(dirname(testData$plinkFile), "xoPat.rds"))
-    xoMat <- readRDS(file.path(dirname(testData$plinkFile), "xoMat.rds"))
+    xo <- loadXo(testData)
 
     testResult <- xoPhase(
         plinkFile = testData$plinkFile,
-        xoDetectPaternal = xoPat,
-        xoDetectMaternal = xoMat
+        xoDetectPaternal = xo$pat,
+        xoDetectMaternal = xo$mat
     )
 
-    # Check first valid family
-    for (famData in testResult) {
-        if (is(famData, "DataFrame") || is.data.frame(famData)) {
-            # Check that locations are numeric and sorted
-            locations <- as.numeric(famData$location)
-            expect_true(all(!is.na(locations)))
-            expect_true(all(diff(locations) >= 0))
-
-            # Check that SNP IDs are present
-            expect_true(all(nchar(as.character(famData$rsID)) > 0))
-
-            # Check that haplotypes contain valid nucleotides or NA
-            validNuc <- c("A", "C", "G", "T", NA)
-            for (col in colnames(famData)) {
-                if (col %in% c("rsID", "location")) next
-                expect_true(all(famData[[col]] %in% validNuc))
-            }
-
-            break # Only check first valid family
-        }
-    }
+    positions <- start(rowRanges(testResult))
+    expect_false(anyNA(positions))
+    expect_true(all(diff(positions) >= 0))
+    expect_true(all(nchar(rownames(testResult)) > 0))
 })
 
 test_that("xoPhase maintains parent-child relationships", {
     skip_if_not(checkTestData(), "Test data not available")
 
     testData <- loadSimCeuData()
-    xoPat <- readRDS(file.path(dirname(testData$plinkFile), "xoPat.rds"))
-    xoMat <- readRDS(file.path(dirname(testData$plinkFile), "xoMat.rds"))
+    xo <- loadXo(testData)
 
     testResult <- xoPhase(
         plinkFile = testData$plinkFile,
-        xoDetectPaternal = xoPat,
-        xoDetectMaternal = xoMat
+        xoDetectPaternal = xo$pat,
+        xoDetectMaternal = xo$mat
     )
 
-    for (famData in testResult) {
-        if (is(famData, "DataFrame") || is.data.frame(famData)) {
-            # Get child columns
-            childPatCols <- grep("Pat$", colnames(famData), value = TRUE)
-            childMatCols <- grep("Mat$", colnames(famData), value = TRUE)
-
-            # Each child should have both Pat and Mat columns
-            childIds <- unique(gsub("(Pat|Mat)$", "", c(childPatCols, childMatCols)))
-
-            for (childId in childIds) {
-                expect_true(paste0(childId, "Pat") %in% colnames(famData))
-                expect_true(paste0(childId, "Mat") %in% colnames(famData))
-            }
-
-            # Get parent columns
-            parentCols <- grep("_[12]$", colnames(famData), value = TRUE)
-            expect_true(length(parentCols) >= 2) # At least one parent with 2 haplotypes
-
-            break
-        }
-    }
+    # Each child's parents are samples from the same family
+    samples <- colData(testResult)
+    children <- samples[!is.na(samples$fatherId), ]
+    expect_true(nrow(children) > 0)
+    expect_true(all(children$fatherId %in% rownames(samples)))
+    expect_true(all(children$motherId %in% rownames(samples)))
+    expect_equal(
+        samples[children$fatherId, "familyId"], children$familyId
+    )
 })
 
 test_that("xoPhase handles homozygous sites correctly", {
     skip_if_not(checkTestData(), "Test data not available")
 
     testData <- loadSimCeuData()
-    xoPat <- readRDS(file.path(dirname(testData$plinkFile), "xoPat.rds"))
-    xoMat <- readRDS(file.path(dirname(testData$plinkFile), "xoMat.rds"))
+    xo <- loadXo(testData)
 
     testResult <- xoPhase(
         plinkFile = testData$plinkFile,
-        xoDetectPaternal = xoPat,
-        xoDetectMaternal = xoMat
+        xoDetectPaternal = xo$pat,
+        xoDetectMaternal = xo$mat
     )
 
-    for (famData in testResult) {
-        if (is(famData, "DataFrame") || is.data.frame(famData)) {
-            # For parent haplotypes, check that some SNPs have identical alleles
-            # (homozygous sites)
-            parentCols <- grep("_[12]$", colnames(famData), value = TRUE)
-
-            if (length(parentCols) >= 2) {
-                # Get pairs of parent haplotypes
-                parentIds <- unique(gsub("_[12]$", "", parentCols))
-
-                for (parentId in parentIds) {
-                    hap1Col <- paste0(parentId, "_1")
-                    hap2Col <- paste0(parentId, "_2")
-
-                    if (hap1Col %in% colnames(famData) && hap2Col %in% colnames(famData)) {
-                        # Some sites should be homozygous (both haplotypes same)
-                        homSites <- famData[[hap1Col]] == famData[[hap2Col]]
-                        homSites <- homSites[!is.na(homSites)]
-
-                        if (length(homSites) > 0) {
-                            # Expect at least some homozygous sites
-                            expect_true(any(homSites))
-                        }
-                    }
-                }
-            }
-
-            break
-        }
-    }
+    # Parents should be homozygous at some sites
+    parents <- is.na(colData(testResult)$fatherId)
+    parentGt <- geno(testResult)$GT[, parents]
+    expect_true(any(parentGt %in% c("0|0", "1|1")))
 })
 
 ## ============================================================================
@@ -529,8 +433,8 @@ test_that("xoPhase handles empty crossover data", {
         "Empty GRanges object provided"
     )
 
-    # Should still return a list
-    expect_type(testResult, "list")
+    # Should still return a VCF
+    expect_s4_class(testResult, "VCF")
 })
 
 test_that("xoPhase handles missing PLINK files", {
@@ -582,8 +486,8 @@ test_that("xoPhase works with parallel processing", {
     )
 
     # Results should be equivalent
-    expect_equal(length(resultSerial), length(resultParallel))
-    expect_equal(names(resultSerial), names(resultParallel))
+    expect_equal(dimnames(resultSerial), dimnames(resultParallel))
+    expect_equal(geno(resultSerial)$GT, geno(resultParallel)$GT)
 })
 
 ## ============================================================================
@@ -714,8 +618,8 @@ test_that("xoPhase integrates with xoDetect output", {
     )
 
     # Verify output
-    expect_type(phased, "list")
-    expect_true(length(phased) > 0)
+    expect_s4_class(phased, "VCF")
+    expect_true(ncol(phased) > 0)
 })
 
 test_that("xoPhase output structure is consistent", {
@@ -739,17 +643,7 @@ test_that("xoPhase output structure is consistent", {
     )
 
     # Results should be identical
-    expect_equal(length(result1), length(result2))
-    expect_equal(names(result1), names(result2))
-
-    # Check first family data is identical
-    if (length(result1) > 0) {
-        for (i in seq_along(result1)) {
-            if (is(result1[[i]], "DataFrame") || is.data.frame(result1[[i]])) {
-                expect_equal(nrow(result1[[i]]), nrow(result2[[i]]))
-                expect_equal(ncol(result1[[i]]), ncol(result2[[i]]))
-                expect_equal(colnames(result1[[i]]), colnames(result2[[i]]))
-            }
-        }
-    }
+    expect_equal(dimnames(result1), dimnames(result2))
+    expect_equal(geno(result1)$GT, geno(result2)$GT)
+    expect_equal(colData(result1), colData(result2))
 })

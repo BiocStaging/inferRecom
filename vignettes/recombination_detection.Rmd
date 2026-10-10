@@ -218,25 +218,31 @@ novel phasing algorithm to produce long-range haplotype phase information at
 informative SNPs. Using the information in the nuclear family structures, it is 
 possible to obtain chromosome-scale haplotypes at the informative subset of 
 SNPs. In these data, 36% of total SNPs are informative. Homozygous SNPs are also
-reported, and non-informative SNPs are shown as NA.
+reported, and alleles that cannot be phased are shown as `.`.
 
-The function `xoPhase()` uses the sets of maternal and paternal recombinations 
-to infer haplotype phase at all informative SNPs for all members of each the 
+The function `xoPhase()` uses the sets of maternal and paternal recombinations
+to infer haplotype phase at all informative SNPs for all members of each the
 nuclear families with three or more children. There is also an option to specify
 a subset of family IDs for phasing.
 
-Several options are available for output, including a list of DataFrames, a 
-SummarizedExperiment object, or VCF. The paternal and maternal chromosomes 
-transmitted in each child are labeled with the suffix 'Pat' and 'Mat' 
-respectively, while each chromosome in the parents is labeled with a 1 or 2.
+The output is a `VCF` object from `VariantAnnotation`, with one column per
+family member and phased genotypes in the `GT` field. For each child the first
+allele is the paternal and the second the maternal allele; for each parent the
+two alleles are the parent's two phased haplotypes. Family and parent IDs are
+stored in `colData()`.
 
 ```{r}
-phased <- xoPhase(simCEU,
-    pat3,
-    mat3,
-    output = "list"
-)
-phased$F6[1158:1162, ]
+phased <- xoPhase(simCEU, pat3, mat3)
+phased
+
+f6 <- colData(phased)$familyId == "F6"
+geno(phased)$GT[1158:1162, f6]
+```
+
+The phased genotypes can be written to a VCF file with `writeVcf()`.
+
+```{r, eval=FALSE}
+writeVcf(phased, "~/path/to/phased.vcf")
 ```
 
 # Session Information

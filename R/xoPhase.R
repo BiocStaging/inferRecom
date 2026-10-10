@@ -13,29 +13,21 @@
 #'     NULL, all families with 5+ members are analyzed. Default is NULL.
 #' @param rsOnly Logical; whether to restrict to SNPs with names beginning
 #'     with "rs". Default is TRUE.
-#' @param outputFormat Character string; format for output. Options are "list"
-#'     (default, returns named list of DataFrames), "summarizedExperiment"
-#'     (returns \link[SummarizedExperiment:SummarizedExperiment-class]{SummarizedExperiment} object),
-#'     or "vcf" (writes VCF files).
-#' @param vcfOutput Character string; path prefix for VCF output files. Only
-#'     used when outputFormat = "vcf". Each family will be written to a
-#'     separate VCF file with suffix "_<familyID>.vcf". Default is "phased".
 #' @param BPPARAM A BiocParallelParam object specifying parallel execution.
 #'     Default is \code{SerialParam()} for serial execution. Use
 #'     \code{MulticoreParam(workers = n)} for parallel processing across n cores.
 #'
-#' @return Depends on outputFormat:
-#'     \itemize{
-#'       \item "list": A named list of \link[S4Vectors:DataFrame-class]{DataFrame}
-#'             objects, one per family. Each DataFrame contains phased haplotypes
-#'             with columns for SNP ID, physical position, and phased alleles for each
-#'             family member.
-#'       \item "summarizedExperiment": A \link[SummarizedExperiment:SummarizedExperiment-class]{SummarizedExperiment}
-#'             object containing phased genotypes across all families with
-#'             rowData (SNP information) and colData (sample information).
-#'       \item "vcf": Writes VCF files and returns paths to created files.
-#'     }
-#'     Returns a message if no phase information is available for a family.
+#' @return A \link[VariantAnnotation:VCF-class]{VCF} object with one row per
+#'     SNP and one column per family member, for all phased families. The
+#'     \code{GT} genotype field holds phased genotypes (e.g. \code{"0|1"}),
+#'     coded against \code{REF} (PLINK allele 1) and \code{ALT} (PLINK
+#'     allele 2); \code{"."} marks an allele that could not be phased. For
+#'     children the first allele is paternal and the second maternal; for
+#'     parents the alleles are the two phased haplotypes. \code{colData}
+#'     holds \code{familyId}, \code{fatherId}, \code{motherId}, \code{sex}
+#'     and \code{affected} from the FAM file. Families without phase
+#'     information are omitted with a message. Use
+#'     \code{VariantAnnotation::writeVcf()} to write the result to a file.
 #'
 #' @details
 #' This function performs haplotype phasing using family-based genetic data
@@ -66,16 +58,6 @@
 #' Parallel processing is performed by family, improving efficiency for datasets
 #' with many families.
 #'
-#' Output format: Each phased family contains columns:
-#' \itemize{
-#'   \item \code{rsID} - SNP identifier
-#'   \item \code{location} - Physical position in base pairs
-#'   \item For each child: \code{<childID>Pat}, \code{<childID>Mat} - paternal
-#'         and maternal haplotypes
-#'   \item For parents: \code{<parentID>_1}, \code{<parentID>_2} - two
-#'         haplotypes
-#' }
-#'
 #' @examples
 #' # Load example data
 #' dataPath <- system.file("extdata", package = "inferRecom")
@@ -104,9 +86,11 @@
 #'     xoDetectMaternal = xoMat
 #' )
 #'
-#' # Access phased haplotypes for a specific family
-#' family1Phase <- phased[[1]]
-#' family1Phase
+#' phased
+#'
+#' # Phased genotypes for the members of family F6
+#' f6 <- colData(phased)$familyId == "F6"
+#' head(geno(phased)$GT[, f6])
 #'
 #' # Phase haplotypes for subset of families
 #' phasedSubset <- xoPhase(
@@ -118,14 +102,16 @@
 #'
 #' phasedSubset
 #'
+#' # Write to a VCF file
+#' vcfFile <- tempfile(fileext = ".vcf")
+#' writeVcf(phasedSubset, vcfFile)
+#'
 #' @export
 xoPhase <- function(plinkFile,
                     xoDetectPaternal,
                     xoDetectMaternal,
                     famIds = NULL,
                     rsOnly = TRUE,
-                    outputFormat = c("list", "summarizedExperiment", "vcf"),
-                    vcfOutput = "phased",
                     BPPARAM = SerialParam()) {
     ## Argument validation
     if (!is.character(plinkFile) || length(plinkFile) != 1L) {
@@ -146,12 +132,6 @@ xoPhase <- function(plinkFile,
 
     if (!is.logical(rsOnly) || length(rsOnly) != 1L) {
         stop("'rsOnly' must be a single logical value")
-    }
-
-    outputFormat <- match.arg(outputFormat)
-
-    if (!is.character(vcfOutput) || length(vcfOutput) != 1L) {
-        stop("'vcfOutput' must be a single character string")
     }
 
     if (!.checkSameChromosome(xoDetectMaternal) | !.checkSameChromosome(xoDetectPaternal)) {
@@ -235,14 +215,16 @@ xoPhase <- function(plinkFile,
     ## Set names
     names(phaseList) <- familyIds
 
-    ## Return based on output format
-    if (outputFormat == "list") {
-        return(phaseList)
-    } else if (outputFormat == "summarizedExperiment") {
-        return(.convertToSummarizedExperiment(phaseList, bim))
-    } else if (outputFormat == "vcf") {
-        return(.writeVcfFiles(phaseList, bim, vcfOutput))
+    ## Drop families without phase information
+    noPhase <- vapply(phaseList, is.null, logical(1))
+    if (any(noPhase)) {
+        message(
+            "No phase information for families: ",
+            paste(familyIds[noPhase], collapse = ", ")
+        )
     }
+
+    .phaseListToVcf(phaseList[!noPhase], bim, fam)
 }
 
 
@@ -272,7 +254,7 @@ xoPhase <- function(plinkFile,
 #' @param xoPat Paternal crossover data frame
 #' @param xoMat Maternal crossover data frame
 #'
-#' @return DataFrame with phased haplotypes or character message
+#' @return DataFrame with phased haplotypes, or NULL if the family cannot be phased
 #' @keywords internal
 .phaseSingleFamily <- function(familyId, geno, fam, bim, xoPat, xoMat) {
     ## Extract family subset
@@ -288,7 +270,7 @@ xoPhase <- function(plinkFile,
     ]
 
     if (is.vector(genoSubset) || ncol(genoSubset) < 3) {
-        return("No phase information")
+        return(NULL)
     }
 
     ## Get parent column indices
@@ -296,7 +278,7 @@ xoPhase <- function(plinkFile,
     fatherCol <- which(colnames(genoSubset) == fatherId)
 
     if (length(motherCol) == 0L || length(fatherCol) == 0L) {
-        return("No phase information")
+        return(NULL)
     }
 
     ## Reorder: father, mother, children
@@ -313,7 +295,7 @@ xoPhase <- function(plinkFile,
     genoAll <- .getInformativeGenotypes(genoSubset)
 
     if (is.null(genoAll)) {
-        return("No phase information")
+        return(NULL)
     }
 
     ## Assign allele codes (1 or 2) for each parent
@@ -1219,229 +1201,120 @@ xoPhase <- function(plinkFile,
     x[!is.na(x)][1]
 }
 
-#' Convert Phased List to SummarizedExperiment
+#' Convert Phased Families to a VCF Object
 #'
-#' @param phaseList Named list of phased DataFrames
+#' @param phaseList Named list of phased DataFrames, one per family
 #' @param bim BIM data frame
+#' @param fam FAM data frame
 #'
-#' @return SummarizedExperiment object
+#' @return VCF object with phased GT for all family members
 #' @keywords internal
-.convertToSummarizedExperiment <- function(phaseList, bim) {
-    ## Keep only valid phased DataFrames
-    validFamilies <- phaseList[vapply(
-        phaseList,
-        function(x) is(x, "DataFrame") || is.data.frame(x),
-        logical(1)
-    )]
+.phaseListToVcf <- function(phaseList, bim, fam) {
+    ## SNPs across all families, in genomic order
+    snps <- unique(unlist(lapply(phaseList, function(x) as.character(x$rsID))))
+    bimIdx <- match(snps, bim$snp)
+    snpOrder <- order(bim$chr[bimIdx], bim$pos[bimIdx])
+    snps <- snps[snpOrder]
+    bimIdx <- bimIdx[snpOrder]
+    ref <- bim$a1[bimIdx]
+    alt <- bim$a2[bimIdx]
 
-    if (!length(validFamilies)) {
-        stop("No valid phased data to convert to SummarizedExperiment")
-    }
+    ## Phased genotypes, with samples in FAM file order
+    gtList <- lapply(phaseList, .familyGenotypes,
+        snps = snps, ref = ref, alt = alt
+    )
+    gt <- do.call(cbind, c(list(matrix(character(), length(snps), 0L)),
+        unname(gtList)))
+    sampleIds <- as.character(colnames(gt))
+    sampleIds <- sampleIds[order(match(sampleIds, fam$member))]
+    gt <- gt[, sampleIds, drop = FALSE]
 
-    ## Collect all SNPs and samples
-    allSnps <- unique(unlist(lapply(validFamilies, function(fam) {
-        fam$rsID
-    })))
-
-    allSamples <- unique(unlist(lapply(validFamilies, function(fam) {
-        setdiff(colnames(fam), c("rsID", "location"))
-    })))
-
-    ## Initialize genotype matrix
-    genoMatrix <- matrix(
-        NA_character_,
-        nrow = length(allSnps),
-        ncol = length(allSamples),
-        dimnames = list(allSnps, allSamples)
+    ## Sample information from the FAM file
+    famIdx <- match(sampleIds, fam$member)
+    sampleData <- DataFrame(
+        familyId = fam$pedigree[famIdx],
+        fatherId = fam$father[famIdx],
+        motherId = fam$mother[famIdx],
+        sex = fam$sex[famIdx],
+        affected = fam$affected[famIdx],
+        row.names = sampleIds
     )
 
-    ## Fill genotype matrix family-wise
-    for (famData in validFamilies) {
-        sampleCols <- setdiff(colnames(famData), c("rsID", "location"))
-        if (!length(sampleCols)) next
-
-        rowIdx <- match(famData$rsID, allSnps)
-        colIdx <- match(sampleCols, allSamples)
-
-        genoMatrix[rowIdx, colIdx] <- as.matrix(famData[, sampleCols, drop = FALSE])
-    }
-
-    ## Build rowData via BIM lookup
-    bimIdx <- match(allSnps, bim$snp)
-
-    rowDataDf <- data.frame(
-        snpId = allSnps,
-        chromosome = bim$chr[bimIdx],
-        position = bim$pos[bimIdx],
-        allele1 = bim$a1[bimIdx],
-        allele2 = bim$a2[bimIdx],
-        stringsAsFactors = FALSE
+    ## SNP positions and alleles; PLINK codes a missing allele as "0"
+    snpRanges <- GRanges(
+        seqnames = as.character(bim$chr[bimIdx]),
+        ranges = IRanges(bim$pos[bimIdx], width = 1L, names = snps)
     )
+    altList <- DNAStringSetList(lapply(alt, function(a) {
+        if (a == "0") character() else a
+    }))
 
-    ## Build colData
-    colDataDf <- data.frame(
-        sampleId = allSamples,
-        stringsAsFactors = FALSE
-    )
-
-    colDataDf$sampleType <- ifelse(
-        grepl("Pat$|Mat$", allSamples),
-        "child_haplotype",
-        ifelse(grepl("_1$|_2$", allSamples),
-            "parent_haplotype",
-            "unknown"
-        )
-    )
-
-    colDataDf$individualId <- gsub("(Pat|Mat|_1|_2)$", "", allSamples)
-
-    ## Map samples to families
-    sampleToFamily <- setNames(
-        rep(NA_character_, length(allSamples)),
-        allSamples
-    )
-
-    for (famId in names(validFamilies)) {
-        famSamples <- setdiff(
-            colnames(validFamilies[[famId]]),
-            c("rsID", "location")
-        )
-        sampleToFamily[famSamples] <- famId
-    }
-
-    colDataDf$familyId <- unname(sampleToFamily[allSamples])
-
-    ## Create SummarizedExperiment
-    SummarizedExperiment(
-        assays  = list(phased = genoMatrix),
-        rowData = rowDataDf,
-        colData = colDataDf
+    VCF(
+        rowRanges = snpRanges,
+        colData = sampleData,
+        metadata = list(header = .phasedVcfHeader(sampleIds)),
+        fixed = DataFrame(
+            REF = DNAStringSet(ref),
+            ALT = altList,
+            QUAL = rep(NA_real_, length(snps)),
+            FILTER = rep("PASS", length(snps))
+        ),
+        geno = SimpleList(GT = gt)
     )
 }
 
-#' Write Phased Genotypes to VCF Files
+#' Phased Genotypes for One Family
 #'
-#' @param phaseList Named list of phased DataFrames
-#' @param bim BIM data frame
-#' @param vcfOutput Path prefix for VCF output
+#' @param famPhase DataFrame of phased haplotypes for one family, with
+#'     \code{<childID>Pat}/\code{<childID>Mat} and
+#'     \code{<parentID>_1}/\code{<parentID>_2} columns
+#' @param snps Character vector of SNP IDs (output rows)
+#' @param ref Character vector of REF alleles, matching \code{snps}
+#' @param alt Character vector of ALT alleles, matching \code{snps}
 #'
-#' @return Character vector of created VCF file paths
+#' @return Character matrix of phased GT values (SNPs x family members)
 #' @keywords internal
-.writeVcfFiles <- function(phaseList, bim, vcfOutput) {
-    ## Keep only valid phased DataFrames
-    validFamilies <- phaseList[vapply(
-        phaseList,
-        function(x) is(x, "DataFrame") || is.data.frame(x),
-        logical(1)
-    )]
+.familyGenotypes <- function(famPhase, snps, ref, alt) {
+    hapCols <- setdiff(colnames(famPhase), c("rsID", "location"))
+    firstHap <- grep("(Pat|_1)$", hapCols, value = TRUE)
+    secondHap <- sub("Pat$", "Mat", sub("_1$", "_2", firstHap))
+    rows <- match(snps, famPhase$rsID)
 
-    if (!length(validFamilies)) {
-        stop("No valid phased data to write to VCF")
+    ## Code alleles as 0 (REF), 1 (ALT) or "." (unknown)
+    alleleCodes <- function(cols) {
+        alleles <- as.matrix(as.data.frame(famPhase)[rows, cols, drop = FALSE])
+        codes <- matrix(".", nrow(alleles), ncol(alleles))
+        codes[which(alleles == ref)] <- "0"
+        codes[which(alleles == alt)] <- "1"
+        codes
     }
 
-    ## Precompute BIM lookup
-    bimIdx <- match(bim$snp, bim$snp)
-    bimMap <- data.frame(
-        snp = bim$snp,
-        chr = bim$chr,
-        pos = bim$pos,
-        ref = bim$a1,
-        alt = bim$a2,
-        stringsAsFactors = FALSE
+    matrix(
+        paste(alleleCodes(firstHap), alleleCodes(secondHap), sep = "|"),
+        nrow = length(snps),
+        dimnames = list(snps, sub("(Pat|_1)$", "", firstHap))
     )
-    rownames(bimMap) <- bimMap$snp
+}
 
-    vcfFiles <- character(length(validFamilies))
+#' VCF Header for Phased Genotypes
+#'
+#' @param sampleIds Character vector of sample IDs
+#'
+#' @return VCFHeader object
+#' @keywords internal
+.phasedVcfHeader <- function(sampleIds) {
+    metaRow <- function(key, value) DataFrame(Value = value, row.names = key)
 
-    for (i in seq_along(validFamilies)) {
-        famId <- names(validFamilies)[i]
-        famData <- validFamilies[[i]]
-
-        vcfFile <- paste0(vcfOutput, "_", famId, ".vcf")
-        vcfFiles[i] <- vcfFile
-
-        sampleCols <- setdiff(colnames(famData), c("rsID", "location"))
-
-        ## Header
-        header <- c(
-            "##fileformat=VCFv4.2",
-            paste0("##fileDate=", format(Sys.Date(), "%Y%m%d")),
-            "##source=xoPhase",
-            "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Phased Genotype\">",
-            paste0(
-                "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t",
-                paste(sampleCols[grepl("Pat$|_1$", sampleCols)], collapse = "\t")
+    VCFHeader(
+        samples = sampleIds,
+        header = DataFrameList(
+            fileformat = metaRow("fileformat", "VCFv4.2"),
+            fileDate = metaRow("fileDate", format(Sys.Date(), "%Y%m%d")),
+            source = metaRow("source", "inferRecom::xoPhase"),
+            FORMAT = DataFrame(
+                Number = "1", Type = "String",
+                Description = "Phased genotype", row.names = "GT"
             )
         )
-
-        writeLines(header, vcfFile)
-
-        ## SNP lookup
-        snpIds <- as.character(famData$rsID)
-        keep <- snpIds %in% rownames(bimMap)
-
-        famData <- famData[keep, , drop = FALSE]
-        snpIds <- snpIds[keep]
-
-        bimSub <- bimMap[snpIds, ]
-
-        ## Genotype matrix
-        geno <- as.matrix(famData[, sampleCols, drop = FALSE])
-
-        ## Allele to numeric conversion
-        ref <- bimSub$ref
-        alt <- bimSub$alt
-
-        genoNum <- matrix(
-            ".",
-            nrow = nrow(geno),
-            ncol = ncol(geno)
-        )
-
-        genoNum[geno == ref] <- "0"
-        genoNum[geno == alt] <- "1"
-
-        ## Collapse haplotypes into phased genotypes
-        patCols <- grepl("Pat$|_1$", sampleCols)
-        matCols <- grepl("Mat$|_2$", sampleCols)
-
-        phased <- matrix(
-            paste0(
-                genoNum[, patCols, drop = FALSE],
-                "|",
-                genoNum[, matCols, drop = FALSE]
-            ),
-            nrow = nrow(genoNum)
-        )
-
-        genoStr <- do.call(
-            paste,
-            c(as.data.frame(phased), sep = "\t")
-        )
-
-        vcfLines <- paste(
-            bimSub$chr,
-            bimSub$pos,
-            snpIds,
-            ref,
-            alt,
-            ".",
-            "PASS",
-            ".",
-            "GT",
-            genoStr,
-            sep = "\t"
-        )
-
-        ## Append data lines to VCF
-        write.table(vcfLines, vcfFile,
-            append = TRUE, quote = FALSE,
-            row.names = FALSE, col.names = FALSE, sep = "\t"
-        )
-    }
-
-    message("VCF files written:")
-    message(paste("  ", vcfFiles, collapse = "\n"))
-
-    invisible(vcfFiles)
+    )
 }

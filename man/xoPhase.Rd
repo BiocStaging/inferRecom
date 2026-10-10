@@ -10,8 +10,6 @@ xoPhase(
   xoDetectMaternal,
   famIds = NULL,
   rsOnly = TRUE,
-  outputFormat = c("list", "summarizedExperiment", "vcf"),
-  vcfOutput = "phased",
   BPPARAM = SerialParam()
 )
 }
@@ -31,32 +29,22 @@ NULL, all families with 5+ members are analyzed. Default is NULL.}
 \item{rsOnly}{Logical; whether to restrict to SNPs with names beginning
 with "rs". Default is TRUE.}
 
-\item{outputFormat}{Character string; format for output. Options are "list"
-(default, returns named list of DataFrames), "summarizedExperiment"
-(returns \link[SummarizedExperiment:SummarizedExperiment-class]{SummarizedExperiment} object),
-or "vcf" (writes VCF files).}
-
-\item{vcfOutput}{Character string; path prefix for VCF output files. Only
-used when outputFormat = "vcf". Each family will be written to a
-separate VCF file with suffix "_\if{html}{\out{<familyID>}}.vcf". Default is "phased".}
-
 \item{BPPARAM}{A BiocParallelParam object specifying parallel execution.
 Default is \code{SerialParam()} for serial execution. Use
 \code{MulticoreParam(workers = n)} for parallel processing across n cores.}
 }
 \value{
-Depends on outputFormat:
-\itemize{
-\item "list": A named list of \link[S4Vectors:DataFrame-class]{DataFrame}
-objects, one per family. Each DataFrame contains phased haplotypes
-with columns for SNP ID, physical position, and phased alleles for each
-family member.
-\item "summarizedExperiment": A \link[SummarizedExperiment:SummarizedExperiment-class]{SummarizedExperiment}
-object containing phased genotypes across all families with
-rowData (SNP information) and colData (sample information).
-\item "vcf": Writes VCF files and returns paths to created files.
-}
-Returns a message if no phase information is available for a family.
+A \link[VariantAnnotation:VCF-class]{VCF} object with one row per
+SNP and one column per family member, for all phased families. The
+\code{GT} genotype field holds phased genotypes (e.g. \code{"0|1"}),
+coded against \code{REF} (PLINK allele 1) and \code{ALT} (PLINK
+allele 2); \code{"."} marks an allele that could not be phased. For
+children the first allele is paternal and the second maternal; for
+parents the alleles are the two phased haplotypes. \code{colData}
+holds \code{familyId}, \code{fatherId}, \code{motherId}, \code{sex}
+and \code{affected} from the FAM file. Families without phase
+information are omitted with a message. Use
+\code{VariantAnnotation::writeVcf()} to write the result to a file.
 }
 \description{
 This function phases parental and child haplotypes based on detected
@@ -90,16 +78,6 @@ crossovers before using this function.
 
 Parallel processing is performed by family, improving efficiency for datasets
 with many families.
-
-Output format: Each phased family contains columns:
-\itemize{
-\item \code{rsID} - SNP identifier
-\item \code{location} - Physical position in base pairs
-\item For each child: \code{<childID>Pat}, \code{<childID>Mat} - paternal
-and maternal haplotypes
-\item For parents: \code{<parentID>_1}, \code{<parentID>_2} - two
-haplotypes
-}
 }
 \examples{
 # Load example data
@@ -129,9 +107,11 @@ phased <- xoPhase(
     xoDetectMaternal = xoMat
 )
 
-# Access phased haplotypes for a specific family
-family1Phase <- phased[[1]]
-family1Phase
+phased
+
+# Phased genotypes for the members of family F6
+f6 <- colData(phased)$familyId == "F6"
+head(geno(phased)$GT[, f6])
 
 # Phase haplotypes for subset of families
 phasedSubset <- xoPhase(
@@ -142,5 +122,9 @@ phasedSubset <- xoPhase(
 )
 
 phasedSubset
+
+# Write to a VCF file
+vcfFile <- tempfile(fileext = ".vcf")
+writeVcf(phasedSubset, vcfFile)
 
 }

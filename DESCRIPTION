@@ -30,12 +30,14 @@ VignetteBuilder: knitr
 biocViews: Genetics, SNP, GenomeAnnotation, Sequencing, Coverage
 Depends:
     R (>= 4.5.0),
-    SummarizedExperiment,
+    VariantAnnotation,
     GenomicRanges,
     S4Vectors
 Imports:
     methods,
     utils,
+    Biostrings,
+    IRanges,
     snpStats,
     BiocParallel,
     dplyr,

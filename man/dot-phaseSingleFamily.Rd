@@ -20,7 +20,7 @@
 \item{xoMat}{Maternal crossover data frame}
 }
 \value{
-DataFrame with phased haplotypes or character message
+DataFrame with phased haplotypes, or NULL if the family cannot be phased
 }
 \description{
 Phase a Single Family
