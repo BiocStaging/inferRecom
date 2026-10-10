@@ -2,6 +2,56 @@
 ## Shared Internal Helper Tests
 ## ============================================================================
 
+test_that("argument checks accept valid values", {
+    plinkFile <- "simCEU"
+    out <- NULL
+    rsOnly <- TRUE
+    famIds <- c("F1", "F2")
+    minMb <- 0.5
+    cmFilter <- 0
+
+    expect_silent(inferRecom:::.checkString(plinkFile))
+    expect_silent(inferRecom:::.checkString(out, allowNull = TRUE))
+    expect_silent(inferRecom:::.checkFlag(rsOnly))
+    expect_silent(inferRecom:::.checkCharacterOrNull(famIds))
+    expect_silent(inferRecom:::.checkNumber(minMb))
+    expect_silent(inferRecom:::.checkNumber(cmFilter, allowZero = TRUE))
+})
+
+test_that("argument checks name the argument in their errors", {
+    plinkFile <- c("a", "b")
+    rsOnly <- NA
+    famIds <- 1
+    minSnps <- 0
+    snpFilter <- -1
+    minCm <- "1"
+
+    expect_error(
+        inferRecom:::.checkString(plinkFile),
+        "'plinkFile' must be a single character string"
+    )
+    expect_error(
+        inferRecom:::.checkFlag(rsOnly),
+        "'rsOnly' must be a single logical value"
+    )
+    expect_error(
+        inferRecom:::.checkCharacterOrNull(famIds),
+        "'famIds' must be a character vector or NULL"
+    )
+    expect_error(
+        inferRecom:::.checkNumber(minSnps, type = "integer"),
+        "'minSnps' must be a positive integer"
+    )
+    expect_error(
+        inferRecom:::.checkNumber(snpFilter, allowZero = TRUE, type = "integer"),
+        "'snpFilter' must be a non-negative integer"
+    )
+    expect_error(
+        inferRecom:::.checkNumber(minCm, allowNull = TRUE),
+        "'minCm' must be a positive numeric value or NULL"
+    )
+})
+
 test_that(".readGeneticMap returns the chr, pos and cM columns", {
     skip_if_not(checkMapFile("female"), "Test data not available")
 

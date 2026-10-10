@@ -115,9 +115,7 @@ xoPhase <- function(plinkFile,
                     rsOnly = TRUE,
                     BPPARAM = SerialParam()) {
     ## Argument validation
-    if (!is.character(plinkFile) || length(plinkFile) != 1L) {
-        stop("'plinkFile' must be a single character string")
-    }
+    .checkString(plinkFile)
 
     if (!is(xoDetectPaternal, "GRanges")) {
         stop("'xoDetectPaternal' must be a GRanges object")
@@ -127,13 +125,8 @@ xoPhase <- function(plinkFile,
         stop("'xoDetectMaternal' must be a GRanges object")
     }
 
-    if (!is.null(famIds) && !is.character(famIds)) {
-        stop("'famIds' must be a character vector or NULL")
-    }
-
-    if (!is.logical(rsOnly) || length(rsOnly) != 1L) {
-        stop("'rsOnly' must be a single logical value")
-    }
+    .checkCharacterOrNull(famIds)
+    .checkFlag(rsOnly)
 
     if (!.checkSameChromosome(xoDetectMaternal) | !.checkSameChromosome(xoDetectPaternal)) {
         stop("GRanges object can only contain ranges from a single chromosome")

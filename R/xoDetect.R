@@ -110,24 +110,15 @@ xoDetect <- function(plinkFile,
     ## Argument validation
     parent <- match.arg(parent)
     familySize <- as.integer(match.arg(as.character(familySize), c("2", "3")))
+    .checkString(plinkFile)
+    .checkString(mapFile)
+    .checkFlag(rsOnly)
+    .checkNumber(snpFilter, allowZero = TRUE, type = "integer")
+    .checkNumber(cmFilter, allowZero = TRUE)
+    .checkFlag(caseControl)
+    .checkString(out, allowNull = TRUE)
 
-    if (!is.null(out) && !is.character(out)) {
-        stop("'out' must be a character string or NULL")
-    }
-
-    if (!is.logical(rsOnly)) {
-        stop("'rsOnly' must be logical")
-    }
-
-    if (!is.numeric(snpFilter) || snpFilter < 0) {
-        stop("'snpFilter' must be a non-negative integer")
-    }
-
-    if (!is.numeric(cmFilter) || cmFilter < 0) {
-        stop("'cmFilter' must be a non-negative numeric value")
-    }
-
-    if (familySize == 2 && caseControl == TRUE) {
+    if (familySize == 2L && caseControl) {
         stop("No case-control separation for 2-child families")
     }
 

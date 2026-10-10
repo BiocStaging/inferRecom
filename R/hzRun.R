@@ -122,43 +122,20 @@ hzRun <- function(plinkFile,
                   caseControl = FALSE,
                   BPPARAM = SerialParam()) {
     ## Argument validation
-    if (!is.character(plinkFile) || length(plinkFile) != 1L) {
-        stop("'plinkFile' must be a single character string")
+    .checkString(plinkFile)
+    .checkString(mapFile, allowNull = TRUE)
+    .checkNumber(minMb)
+    .checkNumber(minSnps, type = "integer")
+    .checkNumber(minCm, allowNull = TRUE)
+    .checkFlag(rsOnly)
+    .checkCharacterOrNull(sampleIds)
+    .checkFlag(caseControl)
+
+    if (!is.null(minCm) && is.null(mapFile)) {
+        stop("'mapFile' must be provided when 'minCm' is specified")
     }
 
-    if (!is.null(mapFile) && (!is.character(mapFile) || length(mapFile) != 1L)) {
-        stop("'mapFile' must be a single character string or NULL")
-    }
-
-    if (!is.numeric(minMb) || length(minMb) != 1L || minMb <= 0) {
-        stop("'minMb' must be a positive numeric value")
-    }
-
-    if (!is.numeric(minSnps) || length(minSnps) != 1L || minSnps <= 0) {
-        stop("'minSnps' must be a positive integer")
-    }
     minSnps <- as.integer(minSnps)
-
-    if (!is.null(minCm)) {
-        if (!is.numeric(minCm) || length(minCm) != 1L || minCm <= 0) {
-            stop("'minCm' must be a positive numeric value or NULL")
-        }
-        if (is.null(mapFile)) {
-            stop("'mapFile' must be provided when 'minCm' is specified")
-        }
-    }
-
-    if (!is.logical(rsOnly) || length(rsOnly) != 1L) {
-        stop("'rsOnly' must be a single logical value")
-    }
-
-    if (!is.null(sampleIds) && !is.character(sampleIds)) {
-        stop("'sampleIds' must be a character vector or NULL")
-    }
-
-    if (!is.logical(caseControl) || length(caseControl) != 1L) {
-        stop("'caseControl' must be a single logical value")
-    }
 
     ## Read PLINK data
     plinkData <- .readPlinkGenotypes(plinkFile, rsOnly)

@@ -1,5 +1,61 @@
 ## ========================== SHARED INTERNAL HELPERS ===========================
 
+## ---------------- Argument checks ----------------
+## Each stops with a message naming the argument, taken from the call, e.g.
+## .checkFlag(rsOnly) gives "'rsOnly' must be a single logical value"
+
+.checkString <- function(x, allowNull = FALSE, name = deparse(substitute(x))) {
+    if (allowNull && is.null(x)) {
+        return(invisible(TRUE))
+    }
+    if (!is.character(x) || length(x) != 1L || is.na(x)) {
+        stop(sprintf(
+            "'%s' must be a single character string%s",
+            name, if (allowNull) " or NULL" else ""
+        ), call. = FALSE)
+    }
+    invisible(TRUE)
+}
+
+.checkFlag <- function(x, name = deparse(substitute(x))) {
+    if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+        stop(sprintf("'%s' must be a single logical value", name),
+            call. = FALSE
+        )
+    }
+    invisible(TRUE)
+}
+
+.checkCharacterOrNull <- function(x, name = deparse(substitute(x))) {
+    if (!is.null(x) && !is.character(x)) {
+        stop(sprintf("'%s' must be a character vector or NULL", name),
+            call. = FALSE
+        )
+    }
+    invisible(TRUE)
+}
+
+## A single number greater than zero, or at least zero if allowZero is TRUE.
+## type names the expected value in the message ("numeric value", "integer")
+.checkNumber <- function(x, allowZero = FALSE, allowNull = FALSE,
+                         type = "numeric value",
+                         name = deparse(substitute(x))) {
+    if (allowNull && is.null(x)) {
+        return(invisible(TRUE))
+    }
+    if (!is.numeric(x) || length(x) != 1L || is.na(x) ||
+        x < 0 || (!allowZero && x == 0)) {
+        stop(sprintf(
+            "'%s' must be a %s %s%s", name,
+            if (allowZero) "non-negative" else "positive", type,
+            if (allowNull) " or NULL" else ""
+        ), call. = FALSE)
+    }
+    invisible(TRUE)
+}
+
+## ---------------- Data input and output ----------------
+
 ## Remove a .bed/.bim/.fam extension so plinkFile is the PLINK prefix. Other
 ## extensions are kept because PLINK prefixes may contain dots (e.g. "cohort.v2")
 .stripPlinkExtension <- function(plinkFile) {
