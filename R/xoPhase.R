@@ -236,8 +236,8 @@ xoPhase <- function(plinkFile,
     famSubset <- fam[fam[, 1] == familyId, ]
 
     ## Identify parents
-    motherId <- .firstNonNA(famSubset$mother[!is.na(famSubset$mother)])
-    fatherId <- .firstNonNA(famSubset$father[!is.na(famSubset$father)])
+    motherId <- .firstNonNA(famSubset$mother)
+    fatherId <- .firstNonNA(famSubset$father)
 
     ## Extract genotypes
     genoSubset <- geno[, which(colnames(geno) %in% famSubset[, 2]),
@@ -1164,16 +1164,6 @@ xoPhase <- function(plinkFile,
     } else {
         return(bim$a1[bimIdx[1]])
     }
-}
-
-#' Get First Non-NA Value
-#'
-#' @param x Vector
-#'
-#' @return First non-NA value
-#' @keywords internal
-.firstNonNA <- function(x) {
-    x[!is.na(x)][1]
 }
 
 #' Convert Phased Families to a VCF Object

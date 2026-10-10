@@ -163,15 +163,6 @@ xoDetect <- function(plinkFile,
 
 ## ========================== INTERNAL HELPERS ===========================
 
-## Extract first non-NA value from vector
-.firstNonNA <- function(x) {
-    idx <- which(!is.na(x))
-    if (length(idx) == 0L) {
-        return(NA)
-    }
-    x[idx[1L]]
-}
-
 ## Identify informative SNP types (heterozygous/homozygous parent pairs)
 .getInformativeSNPs <- function(genoSubset) {
     ## Remove missing data (genotype == 0)
@@ -370,8 +361,8 @@ xoDetect <- function(plinkFile,
     currentFamily <- famSubset[famSubset[, 1] == currentFamId, ]
 
     ## Identify parents
-    motherId <- .firstNonNA(currentFamily$mother[!is.na(currentFamily$mother)])
-    fatherId <- .firstNonNA(currentFamily$father[!is.na(currentFamily$father)])
+    motherId <- .firstNonNA(currentFamily$mother)
+    fatherId <- .firstNonNA(currentFamily$father)
 
     ## Extract genotypes for this family
     familyGeno <- genoMatrix[, which(colnames(genoMatrix) %in% currentFamily[, 2]),

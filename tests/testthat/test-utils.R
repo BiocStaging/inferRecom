@@ -2,6 +2,19 @@
 ## Shared Internal Helper Tests
 ## ============================================================================
 
+test_that(".firstNonNA returns the first non-NA value", {
+    expect_equal(inferRecom:::.firstNonNA(c(NA, NA, 5, 10)), 5)
+    expect_equal(inferRecom:::.firstNonNA(c(1, 2, 3)), 1)
+    expect_equal(inferRecom:::.firstNonNA(c(NA, "F1P1", "F1P2")), "F1P1")
+
+    # NA of the same type when there is no non-NA value
+    expect_identical(inferRecom:::.firstNonNA(c(NA, NA, NA)), NA)
+    expect_identical(
+        inferRecom:::.firstNonNA(c(NA_character_, NA)), NA_character_
+    )
+    expect_identical(inferRecom:::.firstNonNA(character()), NA_character_)
+})
+
 test_that("argument checks accept valid values", {
     plinkFile <- "simCEU"
     out <- NULL

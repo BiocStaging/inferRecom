@@ -7,11 +7,6 @@ test_that("xoPhase helper functions work correctly", {
 
     testData <- loadSimCeuData()
 
-    # Test .firstNonNA
-    expect_equal(inferRecom:::.firstNonNA(c(NA, NA, 5, 10)), 5)
-    expect_equal(inferRecom:::.firstNonNA(c(1, 2, 3)), 1)
-    expect_true(is.na(inferRecom:::.firstNonNA(c(NA, NA, NA))))
-
     # Test .checkSameChromosome with empty GRanges
     emptyGr <- GRanges()
     expect_true(inferRecom:::.checkSameChromosome(emptyGr))

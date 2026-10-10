@@ -54,6 +54,13 @@
     invisible(TRUE)
 }
 
+## ---------------- General ----------------
+
+## First non-NA value of x, or NA of the same type if there is none
+.firstNonNA <- function(x) {
+    x[!is.na(x)][1L]
+}
+
 ## ---------------- Data input and output ----------------
 
 ## Remove a .bed/.bim/.fam extension so plinkFile is the PLINK prefix. Other
