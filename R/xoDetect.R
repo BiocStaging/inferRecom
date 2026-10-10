@@ -110,6 +110,9 @@ xoDetect <- function(plinkFile,
     parent <- match.arg(parent)
     familySize <- as.integer(match.arg(as.character(familySize), c("2", "3")))
 
+    ## Strip extension from plinkFile if present
+    plinkFile <- .stripPlinkExtension(plinkFile)
+
     searchFiles <- sprintf("%s.%s", plinkFile, c("bed", "bim", "fam"))
     missingFiles <- searchFiles[!file.exists(searchFiles)]
 
@@ -140,9 +143,6 @@ xoDetect <- function(plinkFile,
     if (familySize == 2 && caseControl == TRUE) {
         stop("No case-control separation for 2-child families")
     }
-
-    ## Strip extension from plinkFile if present
-    plinkFile <- .stripPlinkExtension(plinkFile)
 
     ## Read PLINK data
     pedData <- read.plink(plinkFile)
