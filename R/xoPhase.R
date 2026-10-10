@@ -1124,7 +1124,7 @@ xoPhase <- function(plinkFile,
     )
 
     ## Check if any children have no crossovers
-    childrenNoXo <- setdiff(childCols, xoDetectMatrix$CHILD)
+    childrenNoXo <- setdiff(childCols, xoDetectMatrix$childId)
 
     if (length(childrenNoXo) > 0) {
         ## Use first child without crossovers
@@ -1148,35 +1148,19 @@ xoPhase <- function(plinkFile,
         names(parentL) <- actgMatrix$rsID
 
         ## Get crossover positions for this child
-        xoChild <- xoDetectMatrix[xoDetectMatrix$CHILD == childName, ]
+        xoChild <- xoDetectMatrix[xoDetectMatrix$childId == childName, ]
 
         if (nrow(xoChild) > 0) {
-            ## Get indices of crossover SNPs
-            xoSnps <- xoChild$START
-            xoIndices <- match(xoSnps, names(parentL))
-            xoIndices <- xoIndices[!is.na(xoIndices)]
+            ## Count the crossovers completed at each SNP (end = position of
+            ## the first SNP after the crossover). Where the count is odd the
+            ## child carries the other parental haplotype, so switch the allele
+            ## back. Homozygous sites are the same on both haplotypes.
+            nXo <- findInterval(actgMatrix$location, sort(xoChild$end))
+            switchIdx <- which(nXo %% 2 == 1 & actgMatrix$hom != 0)
 
-            ## Switch haplotypes at crossover points
-            if (length(xoIndices) > 0) {
-                for (k in seq_along(xoIndices)) {
-                    if (k %% 2 == 1) { ## Odd crossovers - switch
-                        endIdx <- if (k < length(xoIndices)) {
-                            xoIndices[k + 1] - 1
-                        } else {
-                            length(parentL)
-                        }
-
-                        ## Get complementary alleles for this segment
-                        for (j in xoIndices[k]:endIdx) {
-                            parentL[j] <- .getOtherAllele(
-                                names(parentL)[j],
-                                parentL[j],
-                                bim
-                            )
-                        }
-                    }
-                }
-            }
+            parentL[switchIdx] <- vapply(switchIdx, function(j) {
+                .getOtherAllele(names(parentL)[j], parentL[j], bim)
+            }, character(1))
         }
 
         ## Other haplotype is complementary

@@ -31,6 +31,47 @@ test_that("xoPhase helper functions work correctly", {
     expect_false(inferRecom:::.checkSameChromosome(multiChrGr))
 })
 
+test_that(".phaseParent uses crossover data to phase parental haplotypes", {
+    # Parental haplotypes; the parent is homozygous at s5 (hom = 0)
+    hap1 <- c("A", "G", "A", "G", "A", "G")
+    hap2 <- c("G", "A", "G", "A", "A", "A")
+    bim <- data.frame(snp = paste0("s", 1:6), a1 = "A", a2 = "G")
+    makeActg <- function(...) {
+        data.frame(
+            rsID = paste0("s", 1:6), location = seq(100, 600, by = 100),
+            ..., hom = c(1, 1, 1, 1, 0, 1), row.names = paste0("s", 1:6)
+        )
+    }
+    expectHaps <- function(res) {
+        expect_equal(unname(res$P1_1), hap1)
+        expect_equal(unname(res$P1_2), hap2)
+    }
+
+    # C1 switches to hap2 after s3; C2 inherits hap1 intact. C2 must be used
+    # even though C1 is the first child.
+    actg <- makeActg(C1 = c(hap1[1:3], hap2[4:6]), C2 = hap1)
+    xo <- data.frame(childId = "C1", start = 300, end = 400)
+    expectHaps(inferRecom:::.phaseParent(actg, xo, bim, "P1"))
+
+    # Every child has crossovers, so phase from C1's double crossover
+    actg <- makeActg(
+        C1 = c(hap1[1:3], hap2[4:5], hap1[6]),
+        C2 = c(hap2[1:2], hap1[3:6])
+    )
+    xo <- data.frame(
+        childId = c("C1", "C1", "C2"),
+        start = c(300, 500, 200), end = c(400, 600, 300)
+    )
+    expectHaps(inferRecom:::.phaseParent(actg, xo, bim, "P1"))
+
+    # Crossover boundary SNPs need not be rows of the phasing table
+    actg <- makeActg(C1 = c(hap1[1:3], hap2[4:6]), C2 = c(hap2[1:2], hap1[3:6]))
+    xo <- data.frame(
+        childId = c("C1", "C2"), start = c(320, 220), end = c(380, 280)
+    )
+    expectHaps(inferRecom:::.phaseParent(actg, xo, bim, "P1"))
+})
+
 ## ============================================================================
 ## Input Validation Tests
 ## ============================================================================
