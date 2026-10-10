@@ -3,8 +3,8 @@
 
 #' @importFrom BiocParallel bplapply MulticoreParam SerialParam
 #' @importFrom dplyr distinct
-#' @importFrom GenomicRanges end GRanges GRangesList makeGRangesFromDataFrame
-#'     mcols seqnames start strand width
+#' @importFrom GenomicRanges as.data.frame GRanges GRangesList
+#'     makeGRangesFromDataFrame seqnames
 #' @importFrom methods as is
 #' @importFrom S4Vectors DataFrame split
 #' @importFrom snpStats read.plink

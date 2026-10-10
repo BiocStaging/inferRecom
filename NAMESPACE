@@ -11,13 +11,9 @@ importFrom(BiocParallel,
 importFrom(GenomicRanges,
   GRanges,
   GRangesList,
-  end,
+  as.data.frame,
   makeGRangesFromDataFrame,
-  mcols,
-  seqnames,
-  start,
-  strand,
-  width
+  seqnames
 )
 importFrom(S4Vectors,
   DataFrame,

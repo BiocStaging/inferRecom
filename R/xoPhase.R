@@ -158,9 +158,17 @@ xoPhase <- function(plinkFile,
         stop("GRanges object can only contain ranges from a single chromosome")
     }
 
+    if (length(xoDetectPaternal) == 0L) {
+        warning("Empty GRanges object provided for 'xoDetectPaternal'")
+    }
+
+    if (length(xoDetectMaternal) == 0L) {
+        warning("Empty GRanges object provided for 'xoDetectMaternal'")
+    }
+
     ## Convert GRanges to data frames for internal processing
-    xoDetectPaternal <- .granges2DataFrame(xoDetectPaternal)
-    xoDetectMaternal <- .granges2DataFrame(xoDetectMaternal)
+    xoDetectPaternal <- as.data.frame(xoDetectPaternal)
+    xoDetectMaternal <- as.data.frame(xoDetectMaternal)
 
     ## Strip extension from plinkFile if present
     plinkFile <- .stripPlinkExtension(plinkFile)
@@ -1452,61 +1460,4 @@ xoPhase <- function(plinkFile,
     message(paste("  ", vcfFiles, collapse = "\n"))
 
     invisible(vcfFiles)
-}
-
-#' Convert GRanges to DataFrame
-#'
-#' Converts a GRanges object to a data.frame/DataFrame for internal processing
-#'
-#' @param granges GRanges object
-#'
-#' @return data.frame with genomic ranges information and metadata columns
-#' @keywords internal
-.granges2DataFrame <- function(granges) {
-    if (!is(granges, "GRanges")) {
-        stop("Input must be a GRanges object")
-    }
-
-    if (length(granges) == 0) {
-        warning("Empty GRanges object provided")
-        return(data.frame())
-    }
-
-    ## Extract metadata columns first
-    mcolsData <- mcols(granges)
-
-    if (!is.null(mcolsData) && ncol(mcolsData) > 0) {
-        ## Convert mcols to data.frame
-        df <- as.data.frame(mcolsData, stringsAsFactors = FALSE)
-
-        ## Add genomic location columns (prepend to maintain order)
-        locationDf <- data.frame(
-            seqnames = as.character(seqnames(granges)),
-            start = start(granges),
-            end = end(granges),
-            width = width(granges),
-            strand = as.character(strand(granges)),
-            stringsAsFactors = FALSE
-        )
-
-        ## Combine location and metadata
-        df <- cbind(locationDf, df)
-    } else {
-        ## Basic data frame with genomic coordinates (no metadata)
-        df <- data.frame(
-            seqnames = as.character(seqnames(granges)),
-            start = start(granges),
-            end = end(granges),
-            width = width(granges),
-            strand = as.character(strand(granges)),
-            stringsAsFactors = FALSE
-        )
-    }
-
-    ## Set row names if the GRanges object has names
-    if (!is.null(names(granges)) && length(names(granges)) == nrow(df)) {
-        rownames(df) <- names(granges)
-    }
-
-    df
 }

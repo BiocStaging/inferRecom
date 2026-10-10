@@ -31,32 +31,6 @@ test_that("xoPhase helper functions work correctly", {
     expect_false(inferRecom:::.checkSameChromosome(multiChrGr))
 })
 
-test_that(".granges2DataFrame converts GRanges correctly", {
-    # Test with metadata
-    gr <- GRanges(
-        seqnames = c("chr4", "chr4"),
-        ranges = IRanges(start = c(1000, 2000), end = c(1500, 2500)),
-        childId = c("child1", "child2"),
-        familyId = c("fam1", "fam1")
-    )
-
-    df <- inferRecom:::.granges2DataFrame(gr)
-
-    expect_true(is.data.frame(df))
-    expect_equal(nrow(df), 2)
-    expect_true("childId" %in% colnames(df))
-    expect_true("familyId" %in% colnames(df))
-    expect_true("start" %in% colnames(df))
-    expect_true("end" %in% colnames(df))
-    expect_equal(df$childId, c("child1", "child2"))
-
-    # Test with empty GRanges
-    emptyGr <- GRanges()
-    emptyDf <- suppressWarnings(inferRecom:::.granges2DataFrame(emptyGr))
-    expect_true(is.data.frame(emptyDf))
-    expect_equal(nrow(emptyDf), 0)
-})
-
 ## ============================================================================
 ## Input Validation Tests
 ## ============================================================================
