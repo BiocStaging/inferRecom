@@ -10,5 +10,6 @@
 #' @importFrom snpStats read.plink
 #' @importFrom stats setNames
 #' @importFrom SummarizedExperiment SummarizedExperiment
+#' @importFrom tools file_ext file_path_sans_ext
 #' @importFrom utils read.delim write.csv write.table
 NULL

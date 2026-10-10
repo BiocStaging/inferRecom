@@ -163,7 +163,7 @@ xoPhase <- function(plinkFile,
     xoDetectMaternal <- .granges2DataFrame(xoDetectMaternal)
 
     ## Strip extension from plinkFile if present
-    plinkFile <- sub("\\.(bed|bim|fam)$", "", plinkFile, ignore.case = TRUE)
+    plinkFile <- .stripPlinkExtension(plinkFile)
 
     ## Read PLINK data
     ped <- read.plink(plinkFile)

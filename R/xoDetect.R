@@ -142,7 +142,7 @@ xoDetect <- function(plinkFile,
     }
 
     ## Strip extension from plinkFile if present
-    plinkFile <- sub("\\.(bed|bim|fam)$", "", plinkFile, ignore.case = TRUE)
+    plinkFile <- .stripPlinkExtension(plinkFile)
 
     ## Read PLINK data
     pedData <- read.plink(plinkFile)

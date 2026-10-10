@@ -39,7 +39,8 @@ Imports:
     snpStats,
     BiocParallel,
     dplyr,
-    stats
+    stats,
+    tools
 Suggests:
     testthat (>= 3.0.0),
     knitr,
