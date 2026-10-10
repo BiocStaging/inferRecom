@@ -196,14 +196,12 @@ test_that("hzRun handles invalid input", {
 
     # Missing file
     expect_error(
-        suppressWarnings(
-            hzRun(
-                plinkFile = "nonexistent_file",
-                minMb = 1,
-                minSnps = 50
-            )
+        hzRun(
+            plinkFile = "nonexistent_file",
+            minMb = 1,
+            minSnps = 50
         ),
-        regexp = NULL
+        "PLINK file\\(s\\) not found"
     )
 })
 

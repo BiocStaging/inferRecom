@@ -159,31 +159,11 @@ hzRun <- function(plinkFile,
         stop("'caseControl' must be a single logical value")
     }
 
-    ## Strip extension from plinkFile if present
-    plinkFile <- .stripPlinkExtension(plinkFile)
-
     ## Read PLINK data
-    pedData <- read.plink(plinkFile)
-
-    ## Convert SnpMatrix to numeric matrix
-    ## as(object, "numeric") gives 0, 1, 2 for genotype counts, NA for missing
-    genoSnpMat <- pedData$genotypes
-    if (inherits(genoSnpMat, "SnpMatrix")) {
-        ## Convert to numeric: 0=AA, 1=AB, 2=BB, NA=missing
-        genoNumeric <- as(genoSnpMat, "numeric")
-        ## Transpose so SNPs are rows, samples are columns
-        genoMatrix <- t(genoNumeric)
-    } else {
-        genoMatrix <- t(as.matrix(genoSnpMat))
-    }
-
-    ## Ensure matrix is numeric
-    if (!is.numeric(genoMatrix)) {
-        storage.mode(genoMatrix) <- "numeric"
-    }
-
-    mapData <- pedData$map
-    famData <- pedData$fam
+    plinkData <- .readPlinkGenotypes(plinkFile, rsOnly)
+    genoMatrix <- plinkData$geno
+    mapData <- plinkData$map
+    famData <- plinkData$fam
 
     ## Read genetic map if provided
     geneticMap <- NULL
@@ -204,15 +184,6 @@ hzRun <- function(plinkFile,
             cM = geneticMapDf$cM,
             stringsAsFactors = FALSE
         )
-    }
-
-    ## Filter for rs SNPs if requested
-    if (isTRUE(rsOnly)) {
-        rsIdx <- grep("^rs", rownames(genoMatrix), ignore.case = TRUE)
-        if (length(rsIdx) == 0L) {
-            stop("No SNPs with 'rs' prefix found")
-        }
-        genoMatrix <- genoMatrix[rsIdx, , drop = FALSE]
     }
 
     ## Filter for specific IDs if provided

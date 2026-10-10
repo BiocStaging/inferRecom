@@ -197,7 +197,8 @@ test_that("xoDetect handles invalid input", {
             mapFile = testData$mapFemale,
             familySize = 3,
             parent = "mother"
-        )
+        ),
+        "PLINK file\\(s\\) not found"
     )
 })
 

@@ -150,41 +150,22 @@ xoPhase <- function(plinkFile,
     xoDetectPaternal <- as.data.frame(xoDetectPaternal)
     xoDetectMaternal <- as.data.frame(xoDetectMaternal)
 
-    ## Strip extension from plinkFile if present
-    plinkFile <- .stripPlinkExtension(plinkFile)
-
     ## Read PLINK data
-    ped <- read.plink(plinkFile)
+    plinkData <- .readPlinkGenotypes(plinkFile, rsOnly)
+    geno <- plinkData$geno
+    fam <- plinkData$fam
 
-    ## Convert SnpMatrix to numeric matrix
-    genoSnpmat <- ped$genotypes
-    if (inherits(genoSnpmat, "SnpMatrix")) {
-        geno <- t(as(genoSnpmat, "numeric"))
-    } else {
-        geno <- t(as.matrix(genoSnpmat))
-    }
-
-    fam <- ped$fam
-
-    ## Read BIM file for allele information
-    bimFile <- paste0(plinkFile, ".bim")
-    if (!file.exists(bimFile)) {
-        stop("BIM file not found: ", bimFile)
-    }
-    bim <- read.delim(bimFile,
-        header = FALSE, sep = "\t",
-        stringsAsFactors = FALSE, row.names = NULL
+    ## SNP information with allele codes, in BIM file column order
+    map <- plinkData$map
+    bim <- data.frame(
+        chr = map$chromosome,
+        snp = map$snp.name,
+        cm = map$cM,
+        pos = map$position,
+        a1 = map$allele.1,
+        a2 = map$allele.2,
+        row.names = NULL
     )
-    colnames(bim) <- c("chr", "snp", "cm", "pos", "a1", "a2")
-
-    ## Filter for rs SNPs if requested
-    if (isTRUE(rsOnly)) {
-        rsIdx <- grep("^rs", rownames(geno), ignore.case = TRUE)
-        if (length(rsIdx) == 0L) {
-            stop("No SNPs with 'rs' prefix found")
-        }
-        geno <- geno[rsIdx, , drop = FALSE]
-    }
 
     ## Determine families to analyze
     if (!is.null(famIds)) {

@@ -446,14 +446,12 @@ test_that("xoPhase handles missing PLINK files", {
     )
 
     expect_error(
-        expect_warning(
-            xoPhase(
-                plinkFile = "nonexistent_file",
-                xoDetectPaternal = xoPat,
-                xoDetectMaternal = xoPat
-            ),
-            "cannot open file 'nonexistent_file.bim': No such file or directory"
-        )
+        xoPhase(
+            plinkFile = "nonexistent_file",
+            xoDetectPaternal = xoPat,
+            xoDetectMaternal = xoPat
+        ),
+        "PLINK file\\(s\\) not found"
     )
 })
 

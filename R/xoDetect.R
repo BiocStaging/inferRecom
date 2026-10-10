@@ -110,16 +110,6 @@ xoDetect <- function(plinkFile,
     parent <- match.arg(parent)
     familySize <- as.integer(match.arg(as.character(familySize), c("2", "3")))
 
-    ## Strip extension from plinkFile if present
-    plinkFile <- .stripPlinkExtension(plinkFile)
-
-    searchFiles <- sprintf("%s.%s", plinkFile, c("bed", "bim", "fam"))
-    missingFiles <- searchFiles[!file.exists(searchFiles)]
-
-    if (length(missingFiles) > 0L) {
-        stop("PLINK file(s) not found: ", paste(missingFiles, collapse = ", "))
-    }
-
     if (!file.exists(mapFile)) {
         stop("Genetic map file not found: ", mapFile)
     }
@@ -145,24 +135,16 @@ xoDetect <- function(plinkFile,
     }
 
     ## Read PLINK data
-    pedData <- read.plink(plinkFile)
+    pedData <- .readPlinkGenotypes(plinkFile, rsOnly)
     mapDf <- read.delim(mapFile, stringsAsFactors = FALSE)
 
     if (!all(c("chr", "pos", "cM") %in% colnames(mapDf))) {
         stop("mapFile must have columns: chr, pos, cM")
     }
 
-    ## Extract genotype matrix
-    genoMatrix <- as.data.frame(t(pedData$genotypes))
-
-    ## Filter for rs SNPs if requested
-    if (isTRUE(rsOnly)) {
-        rsIdx <- grep("^rs", rownames(genoMatrix), ignore.case = TRUE)
-        if (length(rsIdx) == 0L) {
-            stop("No SNPs with 'rs' prefix found")
-        }
-        genoMatrix <- genoMatrix[rsIdx, , drop = FALSE]
-    }
+    ## Recode genotypes as 0 (missing), 1, 2, 3 for crossover detection
+    genoMatrix <- pedData$geno + 1
+    genoMatrix[is.na(genoMatrix)] <- 0
 
     famData <- pedData$fam
 
