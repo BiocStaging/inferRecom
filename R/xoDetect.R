@@ -416,44 +416,32 @@ xoDetect <- function(plinkFile,
 ## ---------------- Two-child family processing ----------------
 
 .processTwoChildFamily <- function(currentFamId, binaryInheritance, snpFilter) {
-    ## Assign inheritance states (1 = same, 2 = different)
-    inheritanceState <- numeric(nrow(binaryInheritance))
-    names(inheritanceState) <- rownames(binaryInheritance)
-
-    for (i in seq_len(nrow(binaryInheritance))) {
-        if ((binaryInheritance[i, 1] == 0 && binaryInheritance[i, 2] == 0) ||
-            (binaryInheritance[i, 1] == 1 && binaryInheritance[i, 2] == 1)) {
-            inheritanceState[i] <- 1
-        } else {
-            inheritanceState[i] <- 2
-        }
-    }
-
-    if (length(inheritanceState) < 2L) {
+    if (nrow(binaryInheritance) < 2L) {
         return(NULL)
     }
+
+    ## Inheritance state: 1 if the children share the parental allele, else 2
+    inheritanceState <- ifelse(
+        binaryInheritance[, 1] == binaryInheritance[, 2], 1, 2
+    )
+    names(inheritanceState) <- rownames(binaryInheritance)
 
     ## Apply SNP filter
     inheritanceState <- .smoothShortRuns(inheritanceState, snpFilter)
 
-    ## Calculate state changes
-    stateChange <- c(0, diff(inheritanceState))
-    names(stateChange) <- names(inheritanceState)
+    ## Each state change is a crossover in one of the two children
+    changeIdx <- which(diff(inheritanceState) != 0)
 
-    ## Detect crossovers
-    xoEvents <- NULL
-    for (changeIdx in seq(2, length(stateChange))) {
-        if (stateChange[changeIdx] != 0) {
-            eventData <- c(
-                familyId = as.character(currentFamId),
-                startSnp = names(stateChange)[changeIdx - 1],
-                finishSnp = names(stateChange)[changeIdx]
-            )
-            xoEvents <- rbind(xoEvents, eventData)
-        }
+    if (length(changeIdx) == 0L) {
+        return(NULL)
     }
 
-    xoEvents
+    snpNames <- names(inheritanceState)
+    cbind(
+        familyId = as.character(currentFamId),
+        startSnp = snpNames[changeIdx],
+        finishSnp = snpNames[changeIdx + 1L]
+    )
 }
 
 
