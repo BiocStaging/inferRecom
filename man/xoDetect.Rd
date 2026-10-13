@@ -32,8 +32,10 @@ specifying the parent to trace crossovers from.}
 \item{rsOnly}{Logical; whether to restrict to SNPs with names beginning
 with "rs". Default is \code{FALSE}.}
 
-\item{snpFilter}{Integer; minimum number of SNPs separating putative
-crossovers. Default is 5.}
+\item{snpFilter}{Integer; minimum number of informative SNPs separating
+two putative crossovers in the same child. A crossover that is
+reversed within fewer SNPs, typically because of genotyping error, is
+removed together with its reversal. Default is 5.}
 
 \item{cmFilter}{Numeric; minimum genetic distance (cM) separating putative
 crossovers. Default is 1.}

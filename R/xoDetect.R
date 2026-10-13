@@ -14,8 +14,10 @@
 #'     specifying the parent to trace crossovers from.
 #' @param rsOnly Logical; whether to restrict to SNPs with names beginning
 #'     with "rs". Default is \code{FALSE}.
-#' @param snpFilter Integer; minimum number of SNPs separating putative
-#'     crossovers. Default is 5.
+#' @param snpFilter Integer; minimum number of informative SNPs separating
+#'     two putative crossovers in the same child. A crossover that is
+#'     reversed within fewer SNPs, typically because of genotyping error, is
+#'     removed together with its reversal. Default is 5.
 #' @param cmFilter Numeric; minimum genetic distance (cM) separating putative
 #'     crossovers. Default is 1.
 #' @param caseControl Logical; if TRUE, function returns a
@@ -231,30 +233,26 @@ xoDetect <- function(plinkFile,
     binaryMatrix
 }
 
-## Apply SNP filter to remove closely-spaced state changes
-.applySNPFilter <- function(stateChange, snpFilter) {
-    if (snpFilter == 0) {
-        return(character())
+## SNP filter: remove runs of an inheritance state that are shorter than
+## snpFilter SNPs and have the same state on both sides. Such a run is a
+## crossover followed by its reversal in the same child within too few SNPs,
+## typically caused by genotyping error; both state changes are removed.
+.smoothShortRuns <- function(state, snpFilter) {
+    runs <- rle(unname(state))
+    nRuns <- length(runs$lengths)
+
+    if (nRuns < 3L) {
+        return(state)
     }
 
-    snpFilterDrop <- character()
-    changeLength <- length(stateChange)
+    inner <- seq(2L, nRuns - 1L)
+    short <- inner[runs$lengths[inner] < snpFilter &
+        runs$values[inner - 1L] == runs$values[inner + 1L]]
+    runs$values[short] <- runs$values[short - 1L]
 
-    if (changeLength <= snpFilter) {
-        return(character())
-    }
-
-    changeIndex <- which(stateChange != 0)
-    changeIndex <- changeIndex[changeIndex < (changeLength - snpFilter)]
-
-    for (k in changeIndex) {
-        window <- stateChange[k:(k + snpFilter)]
-        if (sum(window) == 0 && var(window) != 0) {
-            snpFilterDrop <- c(snpFilterDrop, rownames(stateChange)[k])
-        }
-    }
-
-    snpFilterDrop
+    smoothed <- inverse.rle(runs)
+    names(smoothed) <- names(state)
+    smoothed
 }
 
 ## Apply cM filter to remove closely-spaced crossovers
@@ -435,18 +433,17 @@ xoDetect <- function(plinkFile,
         return(NULL)
     }
 
+    ## Apply SNP filter
+    inheritanceState <- .smoothShortRuns(inheritanceState, snpFilter)
+
     ## Calculate state changes
     stateChange <- c(0, diff(inheritanceState))
     names(stateChange) <- names(inheritanceState)
 
-    ## Apply SNP filter
-    snpsToDrop <- .applySNPFilter(stateChange, snpFilter)
-
     ## Detect crossovers
     xoEvents <- NULL
     for (changeIdx in seq(2, length(stateChange))) {
-        if (stateChange[changeIdx] != 0 &&
-            !(names(stateChange)[changeIdx - 1] %in% snpsToDrop)) {
+        if (stateChange[changeIdx] != 0) {
             eventData <- c(
                 familyId = as.character(currentFamId),
                 startSnp = names(stateChange)[changeIdx - 1],
@@ -467,7 +464,6 @@ xoDetect <- function(plinkFile,
     numChildren <- ncol(binaryInheritance)
     numTriples <- ceiling(numChildren / 3)
 
-    allSnpsToDrop <- character()
     familyXoEvents <- NULL
 
     for (tripleIdx in seq_len(numTriples)) {
@@ -516,13 +512,12 @@ xoDetect <- function(plinkFile,
             next
         }
 
+        ## Apply SNP filter
+        inheritanceState <- .smoothShortRuns(inheritanceState, snpFilter)
+
         ## Calculate state changes
         stateChange <- c(0, diff(inheritanceState))
         names(stateChange) <- names(inheritanceState)
-
-        ## Apply SNP filter
-        snpsToDrop <- .applySNPFilter(stateChange, snpFilter)
-        allSnpsToDrop <- c(allSnpsToDrop, snpsToDrop)
 
         ## Detect crossovers based on state transitions
         for (changeIdx in seq(2, length(stateChange))) {
@@ -552,16 +547,6 @@ xoDetect <- function(plinkFile,
                 )
                 familyXoEvents <- rbind(familyXoEvents, eventData)
             }
-        }
-    }
-
-    ## Remove events flagged by SNP filter
-    if (!is.null(familyXoEvents) && length(allSnpsToDrop) > 0L) {
-        keepIndices <- !(familyXoEvents[, "startSnp"] %in% allSnpsToDrop)
-        if (any(keepIndices)) {
-            familyXoEvents <- familyXoEvents[keepIndices, , drop = FALSE]
-        } else {
-            familyXoEvents <- NULL
         }
     }
 

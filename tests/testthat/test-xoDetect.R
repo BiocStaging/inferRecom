@@ -316,3 +316,64 @@ test_that("xoDetect GRanges has correct seqnames", {
         expect_true(all(!is.na(seqnames(testResult))))
     }
 })
+
+## ============================================================================
+## SNP Filter Tests
+## ============================================================================
+
+test_that(".smoothShortRuns removes short runs between identical states", {
+    # A single-SNP run of state 2 between runs of state 1
+    state <- setNames(c(1, 1, 1, 2, 1, 1, 1), paste0("rs", 1:7))
+    smoothed <- inferRecom:::.smoothShortRuns(state, snpFilter = 5)
+    expect_equal(unname(smoothed), rep(1, 7))
+    expect_equal(names(smoothed), names(state))
+
+    # Kept when the run is at least snpFilter SNPs long, or snpFilter is 0/1
+    expect_equal(inferRecom:::.smoothShortRuns(state, snpFilter = 1), state)
+    expect_equal(inferRecom:::.smoothShortRuns(state, snpFilter = 0), state)
+    longRun <- c(1, 1, 2, 2, 2, 1, 1)
+    expect_equal(inferRecom:::.smoothShortRuns(longRun, snpFilter = 3), longRun)
+
+    # Kept when the states on either side differ (crossovers in two children)
+    twoChildren <- c(1, 1, 3, 7, 7, 7)
+    expect_equal(
+        inferRecom:::.smoothShortRuns(twoChildren, snpFilter = 5), twoChildren
+    )
+
+    # Kept at either end of the chromosome, where there is no evidence of a
+    # reversal
+    expect_equal(inferRecom:::.smoothShortRuns(c(2, 1, 1, 1), 5), c(2, 1, 1, 1))
+})
+
+test_that("SNP filter removes crossover pairs caused by a genotyping error", {
+    # Two children share inheritance except at rs6, where one SNP disagrees,
+    # and from rs12 onwards, where a real crossover changes the state
+    sameState <- c(rep(1, 5), 0, rep(1, 5), rep(0, 9))
+    binaryInheritance <- cbind(rep(1, 20), sameState)
+    rownames(binaryInheritance) <- paste0("rs", 1:20)
+
+    unfiltered <- inferRecom:::.processTwoChildFamily("F1", binaryInheritance,
+        snpFilter = 0
+    )
+    expect_equal(unname(unfiltered[, "startSnp"]), c("rs5", "rs6", "rs11"))
+
+    filtered <- inferRecom:::.processTwoChildFamily("F1", binaryInheritance,
+        snpFilter = 5
+    )
+    expect_equal(unname(filtered[, "startSnp"]), "rs11")
+    expect_equal(unname(filtered[, "finishSnp"]), "rs12")
+})
+
+test_that("snpFilter changes xoDetect results", {
+    skip_if_not(checkTestData(), "Test data not available")
+
+    testData <- loadSimCeuData()
+    detect <- function(snpFilter) {
+        xoDetect(testData$plinkFile, testData$mapFemale,
+            familySize = 2, parent = "mother", snpFilter = snpFilter,
+            cmFilter = 0
+        )
+    }
+
+    expect_true(length(detect(50)) < length(detect(0)))
+})

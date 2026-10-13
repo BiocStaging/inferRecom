@@ -10,7 +10,7 @@
 #' @importFrom methods as is
 #' @importFrom S4Vectors DataFrame SimpleList split
 #' @importFrom snpStats read.plink
-#' @importFrom stats setNames var
+#' @importFrom stats setNames
 #' @importFrom tools file_ext file_path_sans_ext
 #' @importFrom utils read.delim write.csv
 #' @importFrom VariantAnnotation VCF VCFHeader
