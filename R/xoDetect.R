@@ -208,28 +208,15 @@ xoDetect <- function(plinkFile,
     genoFiltered
 }
 
-## Create binary inheritance matrix for parent-specific haplotypes
+## Create binary inheritance matrix for parent-specific haplotypes: 1 where a
+## child's genotype matches the mother's (column 2), 0 otherwise
 .makeBinaryInheritance <- function(parentSubset) {
     if (nrow(parentSubset) <= 1L) {
         return(NULL)
     }
 
-    binaryMatrix <- matrix(
-        nrow = nrow(parentSubset),
-        ncol = (ncol(parentSubset) - 2)
-    )
-
-    for (i in seq_len(nrow(parentSubset))) {
-        for (j in 3:ncol(parentSubset)) {
-            if (parentSubset[i, 2] == parentSubset[i, j]) {
-                binaryMatrix[i, j - 2] <- 1
-            } else {
-                binaryMatrix[i, j - 2] <- 0
-            }
-        }
-    }
-
-    rownames(binaryMatrix) <- rownames(parentSubset)
+    binaryMatrix <- (parentSubset[, -(1:2), drop = FALSE] == parentSubset[, 2]) * 1
+    dimnames(binaryMatrix) <- list(rownames(parentSubset), NULL)
     binaryMatrix
 }
 
