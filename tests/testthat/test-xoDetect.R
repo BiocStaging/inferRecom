@@ -131,10 +131,11 @@ test_that("xoDetect filters by SNP correctly", {
     expect_s4_class(resultFiltered, "GRanges")
     expect_s4_class(resultAll, "GRanges")
 
-    # Should have string matches to 'rs' in both SNP columns equal to length
-    sum(grepl("^rs", mcols(resultFiltered)$startSnp) &
-        grepl("^rs", mcols(resultFiltered)$finishSnp)) ==
-        length(resultFiltered)
+    # With rsOnly = TRUE, every crossover starts and ends at an rs SNP
+    expect_true(all(
+        grepl("^rs", mcols(resultFiltered)$startSnp) &
+            grepl("^rs", mcols(resultFiltered)$finishSnp)
+    ))
 })
 
 test_that("xoDetect applies filters correctly", {
