@@ -378,3 +378,49 @@ test_that("snpFilter changes xoDetect results", {
 
     expect_true(length(detect(50)) < length(detect(0)))
 })
+
+## ============================================================================
+## Three-Child Inheritance State Tests
+## ============================================================================
+
+test_that("triple state codes identify the child that recombined", {
+    patterns <- as.matrix(expand.grid(c(0, 1), c(0, 1), c(0, 1))[, 3:1])
+    stateOf <- function(p) inferRecom:::.tripleStateCodes[sum(p * c(4, 2, 1)) + 1]
+
+    # Complementary patterns describe the same state
+    expect_equal(
+        apply(patterns, 1, stateOf), apply(1 - patterns, 1, stateOf)
+    )
+
+    # Flipping one child changes the state by an amount that names that child
+    childFound <- vapply(1:3, function(child) {
+        flipped <- patterns
+        flipped[, child] <- 1 - flipped[, child]
+        change <- apply(flipped, 1, stateOf) - apply(patterns, 1, stateOf)
+        inferRecom:::.getChildIdx(change)
+    }, integer(8))
+    expect_equal(childFound, matrix(rep(1:3, each = 8), nrow = 8))
+
+    # A change that does not identify one child gives NA
+    expect_true(is.na(inferRecom:::.getChildIdx(1)))
+})
+
+test_that(".tripleCrossovers reports crossovers in the right child", {
+    # Child 2 recombines between rs10 and rs11; child 3 between rs15 and rs16
+    tripleGeno <- cbind(
+        rep(0, 20), c(rep(0, 10), rep(1, 10)), c(rep(0, 15), rep(1, 5))
+    )
+    rownames(tripleGeno) <- paste0("rs", 1:20)
+
+    xo <- inferRecom:::.tripleCrossovers(
+        tripleGeno, c("C1", "C2", "C3"), "F1", snpFilter = 5
+    )
+    expect_equal(unname(xo[, "childId"]), c("C2", "C3"))
+    expect_equal(unname(xo[, "startSnp"]), c("rs10", "rs15"))
+    expect_equal(unname(xo[, "finishSnp"]), c("rs11", "rs16"))
+
+    # Too few informative SNPs
+    expect_null(inferRecom:::.tripleCrossovers(
+        tripleGeno[1:9, ], c("C1", "C2", "C3"), "F1", snpFilter = 5
+    ))
+})

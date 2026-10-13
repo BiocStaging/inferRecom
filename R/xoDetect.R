@@ -459,98 +459,75 @@ xoDetect <- function(plinkFile,
 
 ## ---------------- Three-child family processing ----------------
 
+## Inheritance state of a triple of children at a SNP, indexed by the 0/1
+## pattern of the three children read as a 3-bit number (plus 1). A pattern
+## and its complement describe the same state. The codes are chosen so that
+## the size of a change between two states identifies the one child that
+## recombined (see .getChildIdx()).
+.tripleStateCodes <- c(1, 3, 14, 7, 7, 14, 3, 1)
+
+## Child (1 to 3 within the triple) whose crossover produces a change of this
+## size between .tripleStateCodes, or NA if the change does not identify one
+.getChildIdx <- function(stateChange) {
+    childByChange <- c(
+        "2" = 3L, "7" = 3L, "4" = 2L, "13" = 2L, "6" = 1L, "11" = 1L
+    )
+    unname(childByChange[as.character(abs(stateChange))])
+}
+
 .processThreeChildFamily <- function(currentFamId, binaryInheritance,
                                      currentFamilyOrdered, snpFilter) {
     numChildren <- ncol(binaryInheritance)
-    numTriples <- ceiling(numChildren / 3)
 
-    familyXoEvents <- NULL
+    ## Analyse children in triples; an incomplete final triple is completed
+    ## with the preceding children
+    tripleEvents <- lapply(seq(1L, numChildren, by = 3L), function(start) {
+        tripleCols <- seq(min(start, numChildren - 2L), length.out = 3L)
+        .tripleCrossovers(
+            binaryInheritance[, tripleCols, drop = FALSE],
+            currentFamilyOrdered$member[tripleCols + 2L],
+            currentFamId, snpFilter
+        )
+    })
 
-    for (tripleIdx in seq_len(numTriples)) {
-        ## Define triple indices
-        tripleStartIdx <- (tripleIdx - 1) * 3 + 1
-        tripleEndIdx <- min(tripleIdx * 3, numChildren)
-        tripleColIndices <- tripleStartIdx:tripleEndIdx
+    do.call(rbind, tripleEvents)
+}
 
-        if (length(tripleColIndices) < 3) {
-            tripleColIndices <- (numChildren - 2):numChildren
-        }
-
-        tripleGeno <- binaryInheritance[, tripleColIndices, drop = FALSE]
-        tripleChildIds <- currentFamilyOrdered$member[(tripleColIndices + 2)]
-
-        ## Assign states based on inheritance pattern
-        inheritanceState <- numeric(nrow(tripleGeno))
-        names(inheritanceState) <- rownames(tripleGeno)
-
-        for (i in seq_len(nrow(tripleGeno))) {
-            pattern <- tripleGeno[i, ]
-
-            if (length(pattern) == 3) {
-                if (all(pattern == 0) || all(pattern == 1)) {
-                    inheritanceState[i] <- 1
-                } else if ((pattern[1] == 0 && pattern[2] == 0 &&
-                    pattern[3] == 1) ||
-                    (pattern[1] == 1 && pattern[2] == 1 &&
-                        pattern[3] == 0)) {
-                    inheritanceState[i] <- 3
-                } else if ((pattern[1] == 0 && pattern[2] == 1 &&
-                    pattern[3] == 1) ||
-                    (pattern[1] == 1 && pattern[2] == 0 &&
-                        pattern[3] == 0)) {
-                    inheritanceState[i] <- 7
-                } else if ((pattern[1] == 1 && pattern[2] == 0 &&
-                    pattern[3] == 1) ||
-                    (pattern[1] == 0 && pattern[2] == 1 &&
-                        pattern[3] == 0)) {
-                    inheritanceState[i] <- 14
-                }
-            }
-        }
-
-        if (length(inheritanceState) < 10L) {
-            next
-        }
-
-        ## Apply SNP filter
-        inheritanceState <- .smoothShortRuns(inheritanceState, snpFilter)
-
-        ## Calculate state changes
-        stateChange <- c(0, diff(inheritanceState))
-        names(stateChange) <- names(inheritanceState)
-
-        ## Detect crossovers based on state transitions
-        for (changeIdx in seq(2, length(stateChange))) {
-            stateChangeValue <- stateChange[changeIdx]
-
-            affectedChildId <- NULL
-            if (abs(stateChangeValue) == 2) {
-                affectedChildId <- tripleChildIds[3]
-            } else if (abs(stateChangeValue) == 4) {
-                affectedChildId <- tripleChildIds[2]
-            } else if (abs(stateChangeValue) %in% c(6, 11)) {
-                affectedChildId <- tripleChildIds[1]
-            } else if (abs(stateChangeValue) %in% c(7, 13)) {
-                if (abs(stateChangeValue) == 7) {
-                    affectedChildId <- tripleChildIds[3]
-                } else {
-                    affectedChildId <- tripleChildIds[2]
-                }
-            }
-
-            if (!is.null(affectedChildId)) {
-                eventData <- c(
-                    childId = as.character(affectedChildId),
-                    familyId = as.character(currentFamId),
-                    startSnp = names(stateChange)[changeIdx - 1],
-                    finishSnp = names(stateChange)[changeIdx]
-                )
-                familyXoEvents <- rbind(familyXoEvents, eventData)
-            }
-        }
+## Crossovers in one triple of children: a character matrix with one row per
+## crossover, or NULL if there are none
+.tripleCrossovers <- function(tripleGeno, tripleChildIds, currentFamId,
+                              snpFilter) {
+    ## Too few informative SNPs to call crossovers
+    if (nrow(tripleGeno) < 10L) {
+        return(NULL)
     }
 
-    familyXoEvents
+    ## Inheritance state at each SNP, with 0 for an unrecognised pattern
+    inheritanceState <- .tripleStateCodes[drop(tripleGeno %*% c(4, 2, 1)) + 1]
+    inheritanceState[is.na(inheritanceState)] <- 0
+    names(inheritanceState) <- rownames(tripleGeno)
+
+    ## Apply SNP filter
+    inheritanceState <- .smoothShortRuns(inheritanceState, snpFilter)
+
+    ## Each state change that identifies a child is a crossover in that child
+    stateChange <- diff(inheritanceState)
+    changeIdx <- which(stateChange != 0)
+    childIdx <- .getChildIdx(stateChange[changeIdx])
+    changeIdx <- changeIdx[!is.na(childIdx)]
+    childIdx <- childIdx[!is.na(childIdx)]
+
+    if (length(changeIdx) == 0L) {
+        return(NULL)
+    }
+
+    snpNames <- names(inheritanceState)
+    cbind(
+        childId = as.character(tripleChildIds[childIdx]),
+        familyId = as.character(currentFamId),
+        startSnp = snpNames[changeIdx],
+        finishSnp = snpNames[changeIdx + 1L]
+    )
 }
 
 
