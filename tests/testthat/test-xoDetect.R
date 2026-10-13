@@ -424,3 +424,28 @@ test_that(".tripleCrossovers reports crossovers in the right child", {
         tripleGeno[1:9, ], c("C1", "C2", "C3"), "F1", snpFilter = 5
     ))
 })
+
+## ============================================================================
+## cM Filter Tests
+## ============================================================================
+
+test_that(".applyCMFilter drops close pairs within the same child", {
+    xoData <- data.frame(
+        childId = c("C1", "C1", "C1", "C2"),
+        familyId = "F1",
+        startPos = c(100, 200, 900, 210),
+        startCm = c(1.0, 1.5, 9.0, 1.6),
+        finishCm = c(1.2, 1.7, 9.2, 1.8)
+    )
+
+    # C1's first two crossovers are 0.3 cM apart; C2's is close to them but in
+    # another child, and C1's third is far away
+    kept <- inferRecom:::.applyCMFilter(xoData, cmFilter = 1)
+    expect_equal(kept$startPos, c(900, 210))
+
+    # Without childId, crossovers are compared within each family
+    keptByFamily <- inferRecom:::.applyCMFilter(xoData[, -1], cmFilter = 1)
+    expect_equal(keptByFamily$startPos, 900)
+
+    expect_equal(inferRecom:::.applyCMFilter(xoData, cmFilter = NA), xoData)
+})

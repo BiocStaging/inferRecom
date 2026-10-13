@@ -261,30 +261,20 @@ xoDetect <- function(plinkFile,
         return(xoData)
     }
 
-    ## Sort by child and position
-    if ("childId" %in% colnames(xoData)) {
-        xoSorted <- xoData[order(xoData$childId, xoData$startPos), ]
+    ## Compare crossovers within each child, or within each family when the
+    ## child is unknown (2-child families), sorted by position
+    groupCol <- if ("childId" %in% colnames(xoData)) "childId" else "familyId"
+    xoSorted <- xoData[order(xoData[[groupCol]], xoData$startPos), ]
 
-        dropIndex <- numeric()
-        for (i in 2:nrow(xoSorted)) {
-            if (xoSorted$childId[i - 1] == xoSorted$childId[i] &&
-                (xoSorted$startCm[i] - xoSorted$finishCm[i - 1] < cmFilter)) {
-                dropIndex <- c(dropIndex, i - 1, i)
-            }
-        }
-    } else {
-        xoSorted <- xoData[order(xoData$familyId, xoData$startPos), ]
+    ## Drop both crossovers of each consecutive pair in the same group that
+    ## are less than cmFilter cM apart
+    nXo <- nrow(xoSorted)
+    group <- xoSorted[[groupCol]]
+    tooClose <- group[-1L] == group[-nXo] &
+        xoSorted$startCm[-1L] - xoSorted$finishCm[-nXo] < cmFilter
+    pairStart <- which(tooClose)
+    dropIndex <- unique(c(pairStart, pairStart + 1L))
 
-        dropIndex <- numeric()
-        for (i in 2:nrow(xoSorted)) {
-            if (xoSorted$familyId[i - 1] == xoSorted$familyId[i] &&
-                (xoSorted$startCm[i] - xoSorted$finishCm[i - 1] < cmFilter)) {
-                dropIndex <- c(dropIndex, i - 1, i)
-            }
-        }
-    }
-
-    dropIndex <- unique(dropIndex)
     if (length(dropIndex) > 0L) {
         xoSorted <- xoSorted[-dropIndex, ]
     }
