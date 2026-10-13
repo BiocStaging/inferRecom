@@ -435,32 +435,3 @@ hzRun <- function(plinkFile,
 
     rohList
 }
-
-#' Get Genetic Position from Physical Position
-#'
-#' Maps physical position (bp) to genetic position (cM)
-#'
-#' @param posBp Numeric vector of physical positions in base pairs
-#' @param geneticMap Data frame with chr, pos and cM columns
-#'
-#' @return Numeric vector of genetic positions in centiMorgans
-#' @keywords internal
-.getGeneticPosition <- function(posBp, geneticMap) {
-    if (is.null(geneticMap) || nrow(geneticMap) == 0L) {
-        return(rep(NA_real_, length(posBp)))
-    }
-
-    ## For each position, find nearest marker in genetic map
-    cmPositions <- vapply(posBp, function(bp) {
-        if (is.na(bp) || bp == 0) {
-            return(NA_real_)
-        }
-        nearestIdx <- which.min(abs(geneticMap$pos - bp))
-        if (length(nearestIdx) == 0L) {
-            return(NA_real_)
-        }
-        geneticMap$cM[nearestIdx]
-    }, numeric(1))
-
-    cmPositions
-}

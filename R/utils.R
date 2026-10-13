@@ -82,6 +82,28 @@
     )
 }
 
+## Genetic position (cM) of each physical position (bp), taken from the nearest
+## marker in the genetic map. NA for missing or zero (unknown) positions.
+.getGeneticPosition <- function(posBp, geneticMap) {
+    if (is.null(geneticMap) || nrow(geneticMap) == 0L) {
+        return(rep(NA_real_, length(posBp)))
+    }
+
+    ## For each position, find nearest marker in genetic map
+    cmPositions <- vapply(posBp, function(bp) {
+        if (is.na(bp) || bp == 0) {
+            return(NA_real_)
+        }
+        nearestIdx <- which.min(abs(geneticMap$pos - bp))
+        if (length(nearestIdx) == 0L) {
+            return(NA_real_)
+        }
+        geneticMap$cM[nearestIdx]
+    }, numeric(1))
+
+    cmPositions
+}
+
 ## ---------------- Data input and output ----------------
 
 ## Remove a .bed/.bim/.fam extension so plinkFile is the PLINK prefix. Other

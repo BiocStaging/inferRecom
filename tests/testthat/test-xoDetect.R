@@ -449,3 +449,24 @@ test_that(".applyCMFilter drops close pairs within the same child", {
 
     expect_equal(inferRecom:::.applyCMFilter(xoData, cmFilter = NA), xoData)
 })
+
+## ============================================================================
+## Position Tests
+## ============================================================================
+
+test_that(".addPositions adds physical and nearest genetic positions", {
+    pedMap <- data.frame(
+        snp.name = c("rs1", "rs2", "rs3", "rs4"),
+        position = c(1000L, 2000L, 0L, 4000L)
+    )
+    geneticMap <- data.frame(chr = "chr4", pos = c(900, 2100, 4200), cM = c(1, 2, 4))
+    xoData <- data.frame(
+        startSnp = c("rs1", "rs2", "rs3"), finishSnp = c("rs2", "rs4", "rs9")
+    )
+
+    xo <- inferRecom:::.addPositions(xoData, pedMap, geneticMap)
+    expect_equal(xo$startPos, c(1000, 2000, 0))
+    expect_equal(xo$finishPos, c(2000, 4000, NA))
+    expect_equal(xo$startCm, c(1, 2, NA)) # position 0 is unknown
+    expect_equal(xo$finishCm, c(2, 4, NA)) # rs9 is not in the map
+})

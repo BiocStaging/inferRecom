@@ -269,54 +269,21 @@ xoDetect <- function(plinkFile,
     xoSorted
 }
 
-## Add physical and genetic positions to crossover results
+## Add physical (bp) and genetic (cM) positions of each crossover's start and
+## finish SNPs
 .addPositions <- function(xoData, pedMap, geneticMap) {
     if (nrow(xoData) == 0L) {
         return(xoData)
     }
 
-    startPosList <- numeric(nrow(xoData))
-    finishPosList <- numeric(nrow(xoData))
-    startCmList <- numeric(nrow(xoData))
-    finishCmList <- numeric(nrow(xoData))
-
-    for (rowIdx in seq_len(nrow(xoData))) {
-        ## Physical positions
-        startSnpIdx <- which(pedMap$snp.name == xoData$startSnp[rowIdx])
-        finishSnpIdx <- which(pedMap$snp.name == xoData$finishSnp[rowIdx])
-
-        if (length(startSnpIdx) > 0L) {
-            startPosList[rowIdx] <- pedMap$position[startSnpIdx[1]]
-        } else {
-            startPosList[rowIdx] <- NA_real_
-        }
-
-        if (length(finishSnpIdx) > 0L) {
-            finishPosList[rowIdx] <- pedMap$position[finishSnpIdx[1]]
-        } else {
-            finishPosList[rowIdx] <- NA_real_
-        }
-
-        ## Genetic positions (cM)
-        if (!is.na(startPosList[rowIdx])) {
-            startCmList[rowIdx] <- geneticMap$cM[which.min(abs(startPosList[rowIdx] -
-                geneticMap$pos))]
-        } else {
-            startCmList[rowIdx] <- NA_real_
-        }
-
-        if (!is.na(finishPosList[rowIdx])) {
-            finishCmList[rowIdx] <- geneticMap$cM[which.min(abs(finishPosList[rowIdx] -
-                geneticMap$pos))]
-        } else {
-            finishCmList[rowIdx] <- NA_real_
-        }
+    snpPosition <- function(snps) {
+        as.numeric(pedMap$position[match(snps, pedMap$snp.name)])
     }
 
-    xoData$startPos <- startPosList
-    xoData$finishPos <- finishPosList
-    xoData$startCm <- startCmList
-    xoData$finishCm <- finishCmList
+    xoData$startPos <- snpPosition(xoData$startSnp)
+    xoData$finishPos <- snpPosition(xoData$finishSnp)
+    xoData$startCm <- .getGeneticPosition(xoData$startPos, geneticMap)
+    xoData$finishCm <- .getGeneticPosition(xoData$finishPos, geneticMap)
 
     xoData
 }
