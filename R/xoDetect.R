@@ -337,46 +337,18 @@ xoDetect <- function(plinkFile,
 
 ## ---------------- Process single family (for parallel execution) ------------
 
-.processSingleFamily <- function(currentFamId, famSubset, genoMatrix, pedMap,
-                                 geneticMap, parent, snpFilter, familySize) {
-    currentFamily <- famSubset[famSubset[, 1] == currentFamId, ]
-
-    ## Identify parents
-    motherId <- .firstNonNA(currentFamily$mother)
-    fatherId <- .firstNonNA(currentFamily$father)
-
-    ## Extract genotypes for this family
-    familyGeno <- genoMatrix[, which(colnames(genoMatrix) %in% currentFamily[, 2]),
-        drop = FALSE
-    ]
-
-    minCols <- if (familySize == 2L) 4L else 5L
-    if (is.vector(familyGeno) || ncol(familyGeno) < minCols) {
-        return(NULL)
-    }
-
-    motherColIdx <- which(colnames(familyGeno) == motherId)
-    fatherColIdx <- which(colnames(familyGeno) == fatherId)
-
-    if (length(motherColIdx) == 0L || length(fatherColIdx) == 0L) {
-        return(NULL)
-    }
-
-    ## Convert to numeric and reorder (father, mother, children)
-    genoRowNames <- rownames(familyGeno)
-    familyGenoNumeric <- apply(familyGeno, 2, as.numeric)
-    rownames(familyGenoNumeric) <- genoRowNames
-
-    childColIndices <- setdiff(
-        seq_len(ncol(familyGenoNumeric)),
-        c(fatherColIdx, motherColIdx)
+.processSingleFamily <- function(currentFamId, famSubset, genoMatrix, parent,
+                                 snpFilter, familySize) {
+    ## Genotypes ordered father, mother, children
+    family <- .orderedFamily(currentFamId, famSubset, genoMatrix,
+        minMembers = if (familySize == 2L) 4L else 5L
     )
-    familyGenoOrdered <- familyGenoNumeric[, c(fatherColIdx, motherColIdx, childColIndices),
-        drop = FALSE
-    ]
+    if (is.null(family)) {
+        return(NULL)
+    }
 
     ## Get informative SNPs
-    informativeGeno <- .getInformativeSNPs(familyGenoOrdered)
+    informativeGeno <- .getInformativeSNPs(family$geno)
     if (is.null(informativeGeno)) {
         return(NULL)
     }
@@ -393,13 +365,11 @@ xoDetect <- function(plinkFile,
 
     if (familySize == 2L) {
         return(.processTwoChildFamily(currentFamId, binaryInheritance, snpFilter))
-    } else {
-        currentFamilyOrdered <- currentFamily[c(fatherColIdx, motherColIdx, childColIndices), ]
-        return(.processThreeChildFamily(
-            currentFamId, binaryInheritance,
-            currentFamilyOrdered, snpFilter
-        ))
     }
+
+    .processThreeChildFamily(
+        currentFamId, binaryInheritance, family$fam, snpFilter
+    )
 }
 
 
@@ -528,8 +498,8 @@ xoDetect <- function(plinkFile,
 
     ## Process families in parallel
     xoList <- bplapply(famIds, function(currentFamId) {
-        .processSingleFamily(currentFamId, famSubset, genoMatrix, pedMap,
-            geneticMap, parent, snpFilter,
+        .processSingleFamily(currentFamId, famSubset, genoMatrix, parent,
+            snpFilter,
             familySize = familySize
         )
     }, BPPARAM = BPPARAM)

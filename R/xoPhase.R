@@ -232,39 +232,14 @@ xoPhase <- function(plinkFile,
 #' @return DataFrame with phased haplotypes, or NULL if the family cannot be phased
 #' @keywords internal
 .phaseSingleFamily <- function(familyId, geno, fam, bim, xoPat, xoMat) {
-    ## Extract family subset
-    famSubset <- fam[fam[, 1] == familyId, ]
-
-    ## Identify parents
-    motherId <- .firstNonNA(famSubset$mother)
-    fatherId <- .firstNonNA(famSubset$father)
-
-    ## Extract genotypes
-    genoSubset <- geno[, which(colnames(geno) %in% famSubset[, 2]),
-        drop = FALSE
-    ]
-
-    if (is.vector(genoSubset) || ncol(genoSubset) < 3) {
+    ## Genotypes ordered father, mother, children
+    family <- .orderedFamily(familyId, fam, geno, minMembers = 3L)
+    if (is.null(family)) {
         return(NULL)
     }
-
-    ## Get parent column indices
-    motherCol <- which(colnames(genoSubset) == motherId)
-    fatherCol <- which(colnames(genoSubset) == fatherId)
-
-    if (length(motherCol) == 0L || length(fatherCol) == 0L) {
-        return(NULL)
-    }
-
-    ## Reorder: father, mother, children
-    childCols <- setdiff(
-        seq_len(ncol(genoSubset)),
-        c(fatherCol, motherCol)
-    )
-    genoSubset <- genoSubset[, c(fatherCol, motherCol, childCols),
-        drop = FALSE
-    ]
-    famSubset <- famSubset[c(fatherCol, motherCol, childCols), ]
+    genoSubset <- family$geno
+    fatherId <- colnames(genoSubset)[1]
+    motherId <- colnames(genoSubset)[2]
 
     ## Get informative genotypes
     genoAll <- .getInformativeGenotypes(genoSubset)

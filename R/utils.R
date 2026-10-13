@@ -61,6 +61,27 @@
     x[!is.na(x)][1L]
 }
 
+## Genotypes of one family, with columns ordered father, mother, children,
+## and the matching rows of the FAM data. NULL if fewer than minMembers family
+## members are genotyped or either parent is not genotyped.
+.orderedFamily <- function(familyId, fam, geno, minMembers) {
+    famSubset <- fam[fam[, 1] == familyId, ]
+    fatherId <- .firstNonNA(famSubset$father)
+    motherId <- .firstNonNA(famSubset$mother)
+    members <- colnames(geno)[colnames(geno) %in% famSubset[, 2]]
+
+    if (length(members) < minMembers ||
+        !all(c(fatherId, motherId) %in% members)) {
+        return(NULL)
+    }
+
+    memberOrder <- c(fatherId, motherId, setdiff(members, c(fatherId, motherId)))
+    list(
+        geno = geno[, memberOrder, drop = FALSE],
+        fam = famSubset[match(memberOrder, famSubset[, 2]), ]
+    )
+}
+
 ## ---------------- Data input and output ----------------
 
 ## Remove a .bed/.bim/.fam extension so plinkFile is the PLINK prefix. Other

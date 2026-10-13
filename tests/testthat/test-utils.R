@@ -15,6 +15,31 @@ test_that(".firstNonNA returns the first non-NA value", {
     expect_identical(inferRecom:::.firstNonNA(character()), NA_character_)
 })
 
+test_that(".orderedFamily orders genotypes father, mother, children", {
+    # FAM rows listed in a different order from the genotype columns
+    fam <- data.frame(
+        pedigree = "F1",
+        member = c("C2", "M", "C1", "F"),
+        father = c("F", NA, "F", NA),
+        mother = c("M", NA, "M", NA),
+        row.names = c("C2", "M", "C1", "F")
+    )
+    geno <- matrix(1:12, nrow = 3, dimnames = list(
+        paste0("rs", 1:3), c("C1", "F", "C2", "M")
+    ))
+
+    family <- inferRecom:::.orderedFamily("F1", fam, geno, minMembers = 4L)
+    expect_equal(colnames(family$geno), c("F", "M", "C1", "C2"))
+    expect_equal(family$geno[, "C2"], geno[, "C2"])
+    expect_equal(family$fam$member, c("F", "M", "C1", "C2"))
+
+    # Too few genotyped members, or a parent not genotyped
+    expect_null(inferRecom:::.orderedFamily("F1", fam, geno, minMembers = 5L))
+    expect_null(inferRecom:::.orderedFamily(
+        "F1", fam, geno[, c("C1", "C2", "M")], minMembers = 3L
+    ))
+})
+
 test_that("argument checks accept valid values", {
     plinkFile <- "simCEU"
     out <- NULL
