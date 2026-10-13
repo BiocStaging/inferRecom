@@ -2,23 +2,29 @@
 % Please edit documentation in R/xoPhase.R
 \name{.matchAlleleCode}
 \alias{.matchAlleleCode}
-\title{Match Allele Code for Single Genotype}
+\title{Match Allele Code}
 \usage{
 .matchAlleleCode(parent, fatherGt, motherGt, childGt)
 }
 \arguments{
-\item{parent}{"father" or "mother"}
+\item{parent}{"father" or "mother": the heterozygous parent}
 
-\item{fatherGt}{Father genotype (0, 1, or 2)}
+\item{fatherGt}{Father genotype(s) (0, 1, or 2)}
 
-\item{motherGt}{Mother genotype (0, 1, or 2)}
+\item{motherGt}{Mother genotype(s) (0, 1, or 2)}
 
-\item{childGt}{Child genotype (0, 1, or 2)}
+\item{childGt}{Child genotype(s) (0, 1, or 2): a vector or a matrix with one
+row per SNP, recycled against \code{fatherGt} and \code{motherGt}}
 }
 \value{
-Allele code (1 or 2)
+Integer allele code(s) (1 or 2), with the dimensions of
+\code{childGt}; NA where the parent is not heterozygous, the other
+parent is not homozygous, or the child's genotype is inconsistent
 }
 \description{
-Match Allele Code for Single Genotype
+Which allele (1 or 2) a child inherited from the heterozygous parent, given
+the genotypes of both parents. The homozygous parent passes on allele 2
+\code{homGt / 2} times, so the heterozygous parent passed on allele 2
+\code{childGt - homGt / 2} times; the code is 1 more than this.
 }
 \keyword{internal}

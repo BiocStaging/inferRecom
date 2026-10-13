@@ -753,22 +753,9 @@ xoPhase <- function(plinkFile,
 
     ## Determine allele codes for children
     genoChildren <- genoParent[, -c(fatherCol, motherCol), drop = FALSE]
-    nChildren <- ncol(genoChildren)
-
-    codeMatrix <- matrix(0L, nrow = nrow(genoParent), ncol = nChildren)
-
-    for (i in seq_len(nrow(genoParent))) {
-        fatherGt <- genoParent[i, fatherCol]
-        motherGt <- genoParent[i, motherCol]
-
-        for (j in seq_len(nChildren)) {
-            childGt <- genoChildren[i, j]
-
-            codeMatrix[i, j] <- .matchAlleleCode(
-                parent, fatherGt, motherGt, childGt
-            )
-        }
-    }
+    codeMatrix <- .matchAlleleCode(
+        parent, genoParent[, fatherCol], genoParent[, motherCol], genoChildren
+    )
 
     ## Create data frame with SNP IDs
     result <- data.frame(
@@ -782,42 +769,33 @@ xoPhase <- function(plinkFile,
     result
 }
 
-#' Match Allele Code for Single Genotype
+#' Match Allele Code
 #'
-#' @param parent "father" or "mother"
-#' @param fatherGt Father genotype (0, 1, or 2)
-#' @param motherGt Mother genotype (0, 1, or 2)
-#' @param childGt Child genotype (0, 1, or 2)
+#' Which allele (1 or 2) a child inherited from the heterozygous parent, given
+#' the genotypes of both parents. The homozygous parent passes on allele 2
+#' \code{homGt / 2} times, so the heterozygous parent passed on allele 2
+#' \code{childGt - homGt / 2} times; the code is 1 more than this.
 #'
-#' @return Allele code (1 or 2)
+#' @param parent "father" or "mother": the heterozygous parent
+#' @param fatherGt Father genotype(s) (0, 1, or 2)
+#' @param motherGt Mother genotype(s) (0, 1, or 2)
+#' @param childGt Child genotype(s) (0, 1, or 2): a vector or a matrix with one
+#'     row per SNP, recycled against \code{fatherGt} and \code{motherGt}
+#'
+#' @return Integer allele code(s) (1 or 2), with the dimensions of
+#'     \code{childGt}; NA where the parent is not heterozygous, the other
+#'     parent is not homozygous, or the child's genotype is inconsistent
 #' @keywords internal
 .matchAlleleCode <- function(parent, fatherGt, motherGt, childGt) {
-    if (parent == "father") {
-        ## Father is heterozygous (1), determine which allele passed to child
-        if (fatherGt == 1 && motherGt == 2 && childGt == 2) {
-            return(2L)
-        } else if (fatherGt == 1 && motherGt == 2 && childGt == 1) {
-            return(1L)
-        } else if (fatherGt == 1 && motherGt == 0 && childGt == 0) {
-            return(1L)
-        } else if (fatherGt == 1 && motherGt == 0 && childGt == 1) {
-            return(2L)
-        }
-    } else {
-        ## Mother is heterozygous (1)
-        if (fatherGt == 2 && motherGt == 1 && childGt == 2) {
-            return(2L)
-        } else if (fatherGt == 2 && motherGt == 1 && childGt == 1) {
-            return(1L)
-        } else if (fatherGt == 0 && motherGt == 1 && childGt == 0) {
-            return(1L)
-        } else if (fatherGt == 0 && motherGt == 1 && childGt == 1) {
-            return(2L)
-        }
-    }
+    hetGt <- if (parent == "father") fatherGt else motherGt
+    homGt <- if (parent == "father") motherGt else fatherGt
 
-    ## If no matches
-    NA_integer_
+    code <- 1 + childGt - homGt / 2
+    valid <- (hetGt == 1 & homGt %in% c(0, 2) & code %in% c(1, 2)) %in% TRUE
+    code[!valid] <- NA
+
+    storage.mode(code) <- "integer"
+    code
 }
 
 #' Convert Allele Codes to Nucleotides
