@@ -12,7 +12,8 @@
 \item{bim}{BIM data frame with allele information}
 }
 \value{
-Data frame with nucleotide alleles
+Data frame with nucleotide alleles: allele 1 or 2 from the BIM
+file, or "" for other codes and for SNPs that are not in the BIM file
 }
 \description{
 Convert Allele Codes to Nucleotides

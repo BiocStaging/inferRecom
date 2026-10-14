@@ -508,6 +508,26 @@ test_that(".matchAlleleCode works correctly", {
     expect_true(is.na(inferRecom:::.matchAlleleCode("father", 0, 0, 0)))
 })
 
+test_that(".convertToNucleotides looks up alleles from the BIM file", {
+    bim <- data.frame(
+        snp = c("rs1", "rs2"), pos = c(1000L, 2000L),
+        a1 = c("A", "C"), a2 = c("G", "T")
+    )
+    alleleCodes <- data.frame(
+        rsID = c("rs1", "rs9", "rs2"),
+        C1 = c(1L, 2L, 0L),
+        C2 = c(2L, 1L, 1L),
+        row.names = c("rs1", "rs9", "rs2")
+    )
+
+    nucleotides <- inferRecom:::.convertToNucleotides(alleleCodes, bim)
+    expect_equal(colnames(nucleotides), c("rsID", "location", "C1", "C2"))
+    expect_equal(nucleotides$location, c("1000", "", "2000"))
+    expect_equal(nucleotides$C1, c("A", "", "")) # rs9 unknown; code 0 invalid
+    expect_equal(nucleotides$C2, c("G", "", "C"))
+    expect_null(inferRecom:::.convertToNucleotides(NULL, bim))
+})
+
 test_that(".getOtherAllele retrieves complementary alleles", {
     # Create mock BIM data
     bim <- data.frame(

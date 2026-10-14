@@ -803,42 +803,33 @@ xoPhase <- function(plinkFile,
 #' @param alleleCodeDf Data frame with allele codes (1 or 2)
 #' @param bim BIM data frame with allele information
 #'
-#' @return Data frame with nucleotide alleles
+#' @return Data frame with nucleotide alleles: allele 1 or 2 from the BIM
+#'     file, or "" for other codes and for SNPs that are not in the BIM file
 #' @keywords internal
 .convertToNucleotides <- function(alleleCodeDf, bim) {
     if (is.null(alleleCodeDf)) {
         return(NULL)
     }
 
-    nRows <- nrow(alleleCodeDf)
-    nCols <- ncol(alleleCodeDf) + 1 ## Add location column
+    bimIdx <- match(alleleCodeDf$rsID, bim$snp)
+    codes <- as.matrix(alleleCodeDf[, -1, drop = FALSE])
 
-    actgMatrix <- matrix(character(nRows * nCols),
-        nrow = nRows, ncol = nCols
+    ## Look up each SNP's alleles by row
+    alleles <- matrix("", nrow(codes), ncol(codes))
+    isA1 <- which(codes == 1 & !is.na(bimIdx))
+    isA2 <- which(codes == 2 & !is.na(bimIdx))
+    alleles[isA1] <- bim$a1[bimIdx[row(codes)[isA1]]]
+    alleles[isA2] <- bim$a2[bimIdx[row(codes)[isA2]]]
+
+    location <- as.character(bim$pos[bimIdx])
+    location[is.na(bimIdx)] <- ""
+
+    result <- data.frame(
+        rsID = as.character(alleleCodeDf$rsID),
+        location = location,
+        alleles,
+        stringsAsFactors = FALSE
     )
-
-    ## Add SNP IDs and locations
-    actgMatrix[, 1] <- as.character(alleleCodeDf$rsID)
-
-    for (i in seq_len(nRows)) {
-        snpId <- alleleCodeDf$rsID[i]
-        bimIdx <- which(bim$snp == snpId)
-
-        if (length(bimIdx) > 0L) {
-            actgMatrix[i, 2] <- as.character(bim$pos[bimIdx[1]])
-
-            for (j in 2:ncol(alleleCodeDf)) {
-                code <- alleleCodeDf[i, j]
-                if (code == 1) {
-                    actgMatrix[i, j + 1] <- bim$a1[bimIdx[1]]
-                } else if (code == 2) {
-                    actgMatrix[i, j + 1] <- bim$a2[bimIdx[1]]
-                }
-            }
-        }
-    }
-
-    result <- as.data.frame(actgMatrix, stringsAsFactors = FALSE)
     colnames(result) <- c("rsID", "location", colnames(alleleCodeDf)[-1])
     rownames(result) <- rownames(alleleCodeDf)
 
