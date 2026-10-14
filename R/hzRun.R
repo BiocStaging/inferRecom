@@ -257,109 +257,47 @@ hzRun <- function(plinkFile,
 #' @keywords internal
 .detectRohSample <- function(genoVec, locationVec, snpNames, sampleId,
                              minSnps, minBp, geneticMap = NULL, minCm = NULL) {
-    ## Convert to binary (homozygous = 1, heterozygous/missing = 0)
-    homozygousVec <- .isHomozygous(genoVec)
+    ## Runs of consecutive homozygous SNPs (heterozygous or missing SNPs end
+    ## a run), with their first and last SNP and physical positions
+    runs <- rle(.isHomozygous(genoVec))
+    endIdx <- cumsum(runs$lengths)
+    roh <- data.frame(start = endIdx - runs$lengths + 1L, end = endIdx)
+    roh <- roh[runs$values == 1L, , drop = FALSE]
+    roh$startBp <- locationVec[roh$start]
+    roh$endBp <- locationVec[roh$end]
 
-    ## Run-length encoding to find consecutive homozygous stretches
-    homozygousRuns <- rle(homozygousVec)
+    ## Filter by number of SNPs and physical length
+    roh <- roh[roh$end - roh$start + 1L >= minSnps &
+        roh$endBp - roh$startBp >= minBp, , drop = FALSE]
 
-    ## Calculate start/end positions of runs
-    endIdx <- cumsum(homozygousRuns$lengths)
-    startIdx <- c(1L, endIdx[-length(endIdx)] + 1L)
-
-    ## Get physical positions
-    startBp <- locationVec[startIdx]
-    endBp <- locationVec[endIdx]
-
-    ## Filter for homozygous runs meeting SNP threshold
-    isHomozygousRun <- homozygousRuns$values == 1L
-    meetsSnpThreshold <- homozygousRuns$lengths >= minSnps
-    passesSnpFilter <- isHomozygousRun & meetsSnpThreshold
-
-    if (!any(passesSnpFilter)) {
-        return(NULL)
-    }
-
-    ## Apply SNP filter
-    startFiltered <- startIdx[passesSnpFilter]
-    endFiltered <- endIdx[passesSnpFilter]
-    startBpFiltered <- startBp[passesSnpFilter]
-    endBpFiltered <- endBp[passesSnpFilter]
-
-    ## Filter by physical length
-    runLengthBp <- endBpFiltered - startBpFiltered
-    meetsLengthThreshold <- runLengthBp >= minBp
-
-    if (!any(meetsLengthThreshold)) {
-        return(NULL)
-    }
-
-    ## Apply physical length filter
-    startFinal <- startFiltered[meetsLengthThreshold]
-    endFinal <- endFiltered[meetsLengthThreshold]
-    startBpFinal <- startBpFiltered[meetsLengthThreshold]
-    endBpFinal <- endBpFiltered[meetsLengthThreshold]
-
-    ## Get genetic positions if available
+    ## Add genetic positions, and filter by genetic length if requested
     if (!is.null(geneticMap)) {
-        startCm <- .getGeneticPosition(startBpFinal, geneticMap)
-        endCm <- .getGeneticPosition(endBpFinal, geneticMap)
+        roh$startCm <- .getGeneticPosition(roh$startBp, geneticMap)
+        roh$endCm <- .getGeneticPosition(roh$endBp, geneticMap)
 
-        ## Apply genetic length filter if specified
         if (!is.null(minCm)) {
-            runLengthCm <- endCm - startCm
-            meetsCmThreshold <- !is.na(runLengthCm) & runLengthCm >= minCm
-
-            if (!any(meetsCmThreshold)) {
-                return(NULL)
-            }
-
-            startFinal <- startFinal[meetsCmThreshold]
-            endFinal <- endFinal[meetsCmThreshold]
-            startBpFinal <- startBpFinal[meetsCmThreshold]
-            endBpFinal <- endBpFinal[meetsCmThreshold]
-            startCm <- startCm[meetsCmThreshold]
-            endCm <- endCm[meetsCmThreshold]
+            lengthCm <- roh$endCm - roh$startCm
+            roh <- roh[!is.na(lengthCm) & lengthCm >= minCm, , drop = FALSE]
         }
-    } else {
-        startCm <- rep(NA_real_, length(startFinal))
-        endCm <- rep(NA_real_, length(startFinal))
     }
 
-    ## Calculate final number of ROH
-    numRoh <- length(startFinal)
-
-    if (numRoh == 0L) {
+    if (nrow(roh) == 0L) {
         return(NULL)
     }
 
-    ## Calculate number of SNPs in each run
-    numSnpsPerRun <- endFinal - startFinal + 1L
-
-    ## Build result matrix
+    ## Character matrix with one row per ROH; cM columns only with a map
+    resultMat <- cbind(
+        sampleId, snpNames[roh$start], snpNames[roh$end],
+        as.character(roh$end - roh$start + 1L),
+        as.character(roh$startBp), as.character(roh$endBp)
+    )
     if (!is.null(geneticMap)) {
-        ## 8 columns with cM information
-        resultMat <- matrix(character(numRoh * 8L), nrow = numRoh, ncol = 8L)
-        resultMat[, 1] <- sampleId
-        resultMat[, 2] <- snpNames[startFinal]
-        resultMat[, 3] <- snpNames[endFinal]
-        resultMat[, 4] <- as.character(numSnpsPerRun)
-        resultMat[, 5] <- as.character(startBpFinal)
-        resultMat[, 6] <- as.character(endBpFinal)
-        resultMat[, 7] <- as.character(startCm)
-        resultMat[, 8] <- as.character(endCm)
-    } else {
-        ## 6 columns without cM information
-        resultMat <- matrix(character(numRoh * 6L), nrow = numRoh, ncol = 6L)
-        resultMat[, 1] <- sampleId
-        resultMat[, 2] <- snpNames[startFinal]
-        resultMat[, 3] <- snpNames[endFinal]
-        resultMat[, 4] <- as.character(numSnpsPerRun)
-        resultMat[, 5] <- as.character(startBpFinal)
-        resultMat[, 6] <- as.character(endBpFinal)
+        resultMat <- cbind(
+            resultMat, as.character(roh$startCm), as.character(roh$endCm)
+        )
     }
 
-    resultMat
+    unname(resultMat)
 }
 
 #' Process Single Individual for ROH Detection
