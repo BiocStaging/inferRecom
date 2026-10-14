@@ -410,6 +410,18 @@ xoPhase <- function(plinkFile,
             } else if (fatherGeno == 1 && motherGeno == 1) {
                 ## Both heterozygous - cannot phase without more info
                 ## Leave as NA
+            } else if (fatherGeno != 1 && motherGeno != 1) {
+                ## Parents homozygous for different alleles: each child
+                ## inherits the father's allele and the mother's allele.
+                ## Children with any other genotype are left as NA.
+                fatherAllele <- if (fatherGeno == 0) allele1 else allele2
+                motherAllele <- if (motherGeno == 0) allele1 else allele2
+                hetChildren <- childIds[genoSubset[snpId, childIds] %in% 1]
+
+                nonInfDf[i, paste0(hetChildren, "Pat")] <- fatherAllele
+                nonInfDf[i, paste0(hetChildren, "Mat")] <- motherAllele
+                nonInfDf[i, paste0(fatherId, c("_1", "_2"))] <- fatherAllele
+                nonInfDf[i, paste0(motherId, c("_1", "_2"))] <- motherAllele
             } else {
                 ## One parent homozygous, one heterozygous
                 ## Use haplotype information from neighboring informative SNPs

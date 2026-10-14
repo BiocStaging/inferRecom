@@ -522,6 +522,34 @@ test_that(".getInformativeGenotypes keeps 0/0 parents, drops missing data", {
     expect_equal(rownames(informative), c("rs1", "rs2"))
 })
 
+test_that(".addNonInformativeSNPs phases parents homozygous for different alleles", {
+    # One informative SNP (rs1) has been phased already
+    phasedData <- data.frame(
+        rsID = "rs1", location = 100,
+        C1Pat = "A", C1Mat = "G", C2Pat = "G", C2Mat = "G",
+        F_1 = "A", F_2 = "G", M_1 = "G", M_2 = "G"
+    )
+    # rs2: father 0/0 (C/C), mother 2/2 (T/T); rs3: father 2/2 (A/A),
+    # mother 0/0 (T/T), with child C2's genotype inconsistent
+    geno <- rbind(rs1 = c(1, 2, 1, 2), rs2 = c(0, 2, 1, 1), rs3 = c(2, 0, 1, 0))
+    colnames(geno) <- c("F", "M", "C1", "C2")
+    bim <- data.frame(
+        chr = 4, snp = c("rs1", "rs2", "rs3"), cm = 0, pos = c(100, 200, 300),
+        a1 = c("A", "C", "T"), a2 = c("G", "T", "A")
+    )
+
+    phased <- inferRecom:::.addNonInformativeSNPs(
+        phasedData, geno, bim, "F", "M", 1L, 2L
+    )
+    alleles <- function(snp) unlist(phased[phased$rsID == snp, -(1:2)])
+    expect_equal(
+        unname(alleles("rs2")), c("C", "T", "C", "T", "C", "C", "T", "T")
+    )
+    expect_equal(
+        unname(alleles("rs3")), c("A", "T", NA, NA, "A", "A", "T", "T")
+    )
+})
+
 test_that(".convertToNucleotides looks up alleles from the BIM file", {
     bim <- data.frame(
         snp = c("rs1", "rs2"), pos = c(1000L, 2000L),
