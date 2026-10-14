@@ -11,8 +11,7 @@
   ids,
   fatherCol,
   motherCol,
-  phasedData,
-  phasedPosMap
+  phasedData
 )
 }
 \arguments{
@@ -27,8 +26,6 @@
 \item{fatherCol, motherCol}{Column indices for the parents in genoSubset}
 
 \item{phasedData}{Data frame with phased informative SNPs}
-
-\item{phasedPosMap}{Named vector mapping positions to rows of phasedData}
 }
 \value{
 Named character vector with one value per column of phasedData:

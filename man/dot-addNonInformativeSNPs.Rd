@@ -33,9 +33,8 @@
 Data frame with all SNPs (informative and non-informative)
 }
 \description{
-Adds SNPs that were not informative for phasing back into the output with
-genotypes inferred from parental homozygous states where possible. For cases
-where one parent is homozygous and one is heterozygous, uses haplotype
-information from neighboring informative SNPs to infer phase.
+Adds SNPs that were not informative for phasing back into the output,
+with alleles inferred from the parental genotypes where possible (see
+\code{.phaseBothHomozygous()} and \code{.phaseOneHeterozygous()}).
 }
 \keyword{internal}

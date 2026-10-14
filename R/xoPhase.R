@@ -40,16 +40,21 @@
 #'   \item Imputes homozygous sites from the other parent
 #'   \item Phases parental haplotypes using crossover breakpoints
 #'   \item Adds back non-informative SNPs with inferred genotypes where possible
-#'   \item Uses neighboring informative SNPs to infer phase for ambiguous cases
 #'   \item Outputs diploid genotypes for all family members across all SNPs
 #' }
 #'
-#' Non-informative SNPs are handled as follows:
+#' Non-informative SNPs are handled as follows. In every case, a child
+#' whose genotype is missing or inconsistent with its parents' genotypes is
+#' left unphased.
 #' \itemize{
-#'   \item Both parents homozygous (same allele): Genotypes confidently inferred
-#'   \item Both parents heterozygous: Phase uncertain, set to NA
-#'   \item One parent heterozygous, one homozygous: Phase inferred from
-#'         neighboring informative SNPs using haplotype continuity
+#'   \item Both parents homozygous: each parent passes on its only allele.
+#'   \item Both parents heterozygous: phase uncertain, set to unknown.
+#'   \item One parent heterozygous, one homozygous (informative SNPs left out
+#'         because of a missing or inconsistent genotype): each child's alleles
+#'         follow from the genotypes. The heterozygous parent is phased from
+#'         which of its haplotypes the children inherited at the nearest
+#'         phased SNPs on both sides, and left unknown if that evidence is
+#'         missing or conflicting.
 #' }
 #'
 #' The function requires crossover detection results from both parents as
@@ -310,10 +315,9 @@ xoPhase <- function(plinkFile,
 
 #' Add Non-Informative SNPs to Phased Output
 #'
-#' Adds SNPs that were not informative for phasing back into the output with
-#' genotypes inferred from parental homozygous states where possible. For cases
-#' where one parent is homozygous and one is heterozygous, uses haplotype
-#' information from neighboring informative SNPs to infer phase.
+#' Adds SNPs that were not informative for phasing back into the output,
+#' with alleles inferred from the parental genotypes where possible (see
+#' \code{.phaseBothHomozygous()} and \code{.phaseOneHeterozygous()}).
 #'
 #' @param phasedData Data frame with phased informative SNPs
 #' @param genoSubset Full genotype matrix for the family
@@ -345,14 +349,9 @@ xoPhase <- function(plinkFile,
     )
 
     ## Phase each non-informative SNP; one character row per SNP
-    phasedPosMap <- setNames(
-        seq_len(nrow(phasedData)),
-        as.character(phasedData$location)
-    )
     nonInfMatrix <- t(vapply(nonInfSnps, function(snpId) {
         .phaseNonInformativeSnp(
-            snpId, genoSubset, bim, ids, fatherCol, motherCol,
-            phasedData, phasedPosMap
+            snpId, genoSubset, bim, ids, fatherCol, motherCol, phasedData
         )
     }, character(ncol(phasedData)), USE.NAMES = FALSE))
     colnames(nonInfMatrix) <- colnames(phasedData)
@@ -377,14 +376,13 @@ xoPhase <- function(plinkFile,
 #' @param ids List with \code{father}, \code{mother} and \code{children} IDs
 #' @param fatherCol,motherCol Column indices for the parents in genoSubset
 #' @param phasedData Data frame with phased informative SNPs
-#' @param phasedPosMap Named vector mapping positions to rows of phasedData
 #'
 #' @return Named character vector with one value per column of phasedData:
 #'     the SNP ID, its location and the phased alleles, NA where unknown. All
 #'     NA for a SNP that is not in the BIM file.
 #' @keywords internal
 .phaseNonInformativeSnp <- function(snpId, genoSubset, bim, ids, fatherCol,
-                                    motherCol, phasedData, phasedPosMap) {
+                                    motherCol, phasedData) {
     row <- setNames(
         rep(NA_character_, ncol(phasedData)), colnames(phasedData)
     )
@@ -411,7 +409,7 @@ xoPhase <- function(plinkFile,
     } else {
         .phaseOneHeterozygous(
             parentGeno, childGeno, alleles, ids,
-            bim$pos[bimIdx], phasedData, phasedPosMap
+            bim$pos[bimIdx], phasedData
         )
     }
 
@@ -421,10 +419,10 @@ xoPhase <- function(plinkFile,
 
 #' Phase a SNP Where Both Parents Are Homozygous
 #'
-#' Each parent passes on its only allele. When the parents are homozygous for
-#' the same allele every child is assigned it; when they are homozygous for
-#' different alleles only heterozygous children are, and children with any
-#' other genotype are left as NA.
+#' Each parent passes on its only allele, so every child with the expected
+#' genotype carries the father's allele on its paternal haplotype and the
+#' mother's allele on its maternal haplotype. Children with any other
+#' genotype, which indicates a genotyping error, are left as NA.
 #'
 #' @param parentGeno Father and mother genotypes (0 or 2)
 #' @param childGeno Named vector of child genotypes
@@ -434,17 +432,19 @@ xoPhase <- function(plinkFile,
 #' @return Named character vector of phased alleles
 #' @keywords internal
 .phaseBothHomozygous <- function(parentGeno, childGeno, alleles, ids) {
-    fatherAllele <- alleles[parentGeno[1] / 2 + 1]
-    motherAllele <- alleles[parentGeno[2] / 2 + 1]
-    children <- if (parentGeno[1] == parentGeno[2]) {
-        ids$children
-    } else {
-        ids$children[childGeno %in% 1]
-    }
+    fatherAllele <- alleles[parentGeno[[1]] / 2 + 1]
+    motherAllele <- alleles[parentGeno[[2]] / 2 + 1]
+    children <- ids$children[childGeno %in% (sum(parentGeno) / 2)]
 
     c(
-        setNames(rep(fatherAllele, length(children)), paste0(children, "Pat", recycle0 = TRUE)),
-        setNames(rep(motherAllele, length(children)), paste0(children, "Mat", recycle0 = TRUE)),
+        setNames(
+            rep(fatherAllele, length(children)),
+            paste0(children, "Pat", recycle0 = TRUE)
+        ),
+        setNames(
+            rep(motherAllele, length(children)),
+            paste0(children, "Mat", recycle0 = TRUE)
+        ),
         setNames(rep(fatherAllele, 2), paste0(ids$father, c("_1", "_2"))),
         setNames(rep(motherAllele, 2), paste0(ids$mother, c("_1", "_2")))
     )
@@ -452,7 +452,14 @@ xoPhase <- function(plinkFile,
 
 #' Phase a SNP Where One Parent Is Heterozygous
 #'
-#' Uses haplotype information from neighboring informative SNPs.
+#' The homozygous parent's haplotypes both carry its allele. The allele each
+#' child received from the heterozygous parent follows from the genotypes
+#' (see \code{.matchAlleleCode()}); children with a missing or inconsistent
+#' genotype are left as NA. The heterozygous parent's phase follows from
+#' which of its haplotypes each child inherited around the SNP (see
+#' \code{.inheritedHaplotype()}): that haplotype carries the allele the child
+#' received. The parent is left as NA if no child gives evidence or the
+#' children disagree.
 #'
 #' @param parentGeno Father and mother genotypes, one of them 1
 #' @param childGeno Named vector of child genotypes
@@ -460,217 +467,87 @@ xoPhase <- function(plinkFile,
 #' @param ids List with \code{father}, \code{mother} and \code{children} IDs
 #' @param snpPos Physical position of the SNP
 #' @param phasedData Data frame with phased informative SNPs
-#' @param phasedPosMap Named vector mapping positions to rows of phasedData
 #'
 #' @return Named character vector of phased alleles
 #' @keywords internal
 .phaseOneHeterozygous <- function(parentGeno, childGeno, alleles, ids,
-                                  snpPos, phasedData, phasedPosMap) {
-    hetParent <- if (parentGeno[1] == 1) "father" else "mother"
-    hetParentGeno <- parentGeno[[if (hetParent == "father") 1 else 2]]
-    homParentGeno <- parentGeno[[if (hetParent == "father") 2 else 1]]
-    homAllele <- if (homParentGeno == 0) alleles[1] else alleles[2]
+                                  snpPos, phasedData) {
+    hetParent <- if (parentGeno[[1]] == 1) "father" else "mother"
+    hetId <- ids[[hetParent]]
+    homId <- if (hetParent == "father") ids$mother else ids$father
+    homAllele <- alleles[parentGeno[[if (hetParent == "father") 2 else 1]] / 2 + 1]
     hetSuffix <- if (hetParent == "father") "Pat" else "Mat"
     homSuffix <- if (hetParent == "father") "Mat" else "Pat"
 
-    neighbors <- .findNeighboringSNPs(snpPos, phasedData, phasedPosMap)
+    ## Allele each child received from the heterozygous parent
+    received <- alleles[.matchAlleleCode(
+        hetParent, parentGeno[[1]], parentGeno[[2]], childGeno
+    )]
+    names(received) <- ids$children
+    children <- ids$children[!is.na(received)]
 
-    if (is.null(neighbors$left) && is.null(neighbors$right)) {
-        return(character())
-    }
-
-    ## Allele each child inherited from the heterozygous parent
-    inferred <- vapply(ids$children, function(childId) {
-        .inferHetParentAllele(
-            childGeno = childGeno[[childId]],
-            hetParentGeno = hetParentGeno,
-            homParentGeno = homParentGeno,
-            allele1 = alleles[1],
-            allele2 = alleles[2],
-            childId = childId,
-            hetParent = hetParent,
-            neighbors = neighbors,
-            phasedData = phasedData
+    ## Allele on the heterozygous parent's haplotype 1 implied by each child
+    hap1 <- phasedData[[paste0(hetId, "_1")]]
+    hap2 <- phasedData[[paste0(hetId, "_2")]]
+    positions <- as.numeric(phasedData$location)
+    impliedHap1 <- vapply(children, function(child) {
+        inherited <- .inheritedHaplotype(
+            phasedData[[paste0(child, hetSuffix)]], hap1, hap2,
+            positions, snpPos
         )
+        if (is.na(inherited)) {
+            return(NA_character_)
+        }
+        allele <- received[[child]]
+        if (inherited == 1L) allele else alleles[3L - match(allele, alleles)]
     }, character(1))
-    children <- ids$children[!is.na(inferred)]
+    impliedHap1 <- unique(impliedHap1[!is.na(impliedHap1)])
 
     phased <- c(
-        setNames(inferred[children], paste0(children, hetSuffix, recycle0 = TRUE)),
-        setNames(rep(homAllele, length(children)), paste0(children, homSuffix, recycle0 = TRUE))
+        setNames(received[children], paste0(children, hetSuffix, recycle0 = TRUE)),
+        setNames(
+            rep(homAllele, length(children)),
+            paste0(children, homSuffix, recycle0 = TRUE)
+        ),
+        setNames(rep(homAllele, 2), paste0(homId, c("_1", "_2")))
     )
 
-    ## Phase the heterozygous parent
-    hetPhase <- .inferHetParentPhase(
-        neighbors = neighbors,
-        phasedData = phasedData,
-        hetParent = hetParent,
-        fatherId = ids$father,
-        motherId = ids$mother,
-        allele1 = alleles[1],
-        allele2 = alleles[2]
-    )
-
-    if (!is.null(hetPhase)) {
-        hetId <- if (hetParent == "father") ids$father else ids$mother
-        homId <- if (hetParent == "father") ids$mother else ids$father
-        phased <- c(
-            phased,
-            setNames(c(hetPhase$hap1, hetPhase$hap2), paste0(hetId, c("_1", "_2"))),
-            setNames(rep(homAllele, 2), paste0(homId, c("_1", "_2")))
-        )
+    if (length(impliedHap1) == 1L) {
+        hapAlleles <- c(impliedHap1, alleles[3L - match(impliedHap1, alleles)])
+        phased <- c(phased, setNames(hapAlleles, paste0(hetId, c("_1", "_2"))))
     }
 
     phased
 }
 
-#' Find Neighboring Informative SNPs
+#' Haplotype a Child Inherited Around a SNP
 #'
-#' Finds the closest informative SNPs on either side of a target position
+#' Which haplotype (1 or 2) of a heterozygous parent a child inherited around
+#' a SNP, read from the nearest phased SNP on each side where the parent's
+#' two haplotypes differ and the child's allele from that parent is known.
 #'
-#' @param targetPos Physical position of target SNP
-#' @param phasedData Data frame with phased informative SNPs
-#' @param phasedPosMap Named vector mapping positions to row indices
+#' @param childAlleles Child's alleles from the parent at the phased SNPs
+#' @param hap1,hap2 Parent's haplotypes at the phased SNPs
+#' @param positions Physical positions of the phased SNPs
+#' @param snpPos Physical position of the SNP
 #'
-#' @return List with 'left' and 'right' neighbor indices, or NULL if not found
+#' @return 1 or 2, or NA if the two sides disagree (the child has a crossover
+#'     between them) or there is no usable SNP. Near a chromosome end, the
+#'     one available side is used.
 #' @keywords internal
-.findNeighboringSNPs <- function(targetPos, phasedData, phasedPosMap) {
-    if (nrow(phasedData) == 0) {
-        return(list(left = NULL, right = NULL))
-    }
+.inheritedHaplotype <- function(childAlleles, hap1, hap2, positions, snpPos) {
+    inherited <- ifelse(childAlleles == hap1, 1L,
+        ifelse(childAlleles == hap2, 2L, NA_integer_)
+    )
+    usable <- !is.na(inherited) & hap1 != hap2
+    left <- which(usable & positions < snpPos)
+    right <- which(usable & positions > snpPos)
 
-    phasedPositions <- as.numeric(phasedData$location)
-
-    ## Find closest SNP to the left (smaller position)
-    leftPositions <- phasedPositions[phasedPositions < targetPos]
-    leftIdx <- NULL
-    if (length(leftPositions) > 0) {
-        leftPos <- max(leftPositions)
-        leftIdx <- which(phasedPositions == leftPos)[1]
-    }
-
-    ## Find closest SNP to the right (larger position)
-    rightPositions <- phasedPositions[phasedPositions > targetPos]
-    rightIdx <- NULL
-    if (length(rightPositions) > 0) {
-        rightPos <- min(rightPositions)
-        rightIdx <- which(phasedPositions == rightPos)[1]
-    }
-
-    list(left = leftIdx, right = rightIdx)
-}
-
-#' Infer Heterozygous Parent Allele for Child
-#'
-#' Infers which allele a child inherited from the heterozygous parent
-#' using neighboring informative SNPs
-#'
-#' @param childGeno Child's genotype (0, 1, or 2)
-#' @param hetParentGeno Heterozygous parent's genotype (always 1)
-#' @param homParentGeno Homozygous parent's genotype (0 or 2)
-#' @param allele1 Reference allele
-#' @param allele2 Alternate allele
-#' @param childId Child identifier
-#' @param hetParent "father" or "mother" - which parent is heterozygous
-#' @param neighbors List with left and right neighbor indices
-#' @param phasedData Data frame with phased informative SNPs
-#'
-#' @return Inferred allele (allele1 or allele2), or NA if cannot infer
-#' @keywords internal
-.inferHetParentAllele <- function(childGeno, hetParentGeno, homParentGeno,
-                                  allele1, allele2, childId, hetParent,
-                                  neighbors, phasedData) {
-    ## Determine which haplotype column to examine based on parent
-    hapCol <- if (hetParent == "father") {
-        paste0(childId, "Pat")
-    } else {
-        paste0(childId, "Mat")
-    }
-
-    ## Try to infer from nearest neighbor (prefer closer one)
-    neighborIdxList <- c(neighbors$right, neighbors$left)
-    neighborIdxList <- neighborIdxList[!vapply(neighborIdxList, is.null, logical(1))]
-
-    if (length(neighborIdxList) == 0) {
-        return(NA_character_)
-    }
-
-    ## Check neighbors in order of proximity
-    for (neighborIdx in neighborIdxList) {
-        neighborAllele <- phasedData[[hapCol]][neighborIdx]
-
-        if (!is.na(neighborAllele)) {
-            ## Assume haplotype continuity: same allele at nearby SNP
-            ## means likely same haplotype
-
-            ## If child is heterozygous (genotype 1), both alleles present
-            ## Use neighbor to determine which came from het parent
-            if (childGeno == 1) {
-                ## Child has one copy of each allele
-                ## The one matching the neighbor is likely from het parent
-                return(neighborAllele)
-            } else if (childGeno == 0) {
-                ## Child is 0/0, so inherited allele1 from both parents
-                ## If neighbor shows allele1, consistent with het parent giving allele1
-                if (neighborAllele == allele1) {
-                    return(allele1)
-                }
-            } else if (childGeno == 2) {
-                ## Child is 2/2, so inherited allele2 from both parents
-                ## If neighbor shows allele2, consistent with het parent giving allele2
-                if (neighborAllele == allele2) {
-                    return(allele2)
-                }
-            }
-        }
-    }
-
-    return(NA_character_)
-}
-
-#' Infer Heterozygous Parent Phase
-#'
-#' Infers the phase of the heterozygous parent using neighboring informative SNPs
-#'
-#' @param neighbors List with left and right neighbor indices
-#' @param phasedData Data frame with phased informative SNPs
-#' @param hetParent "father" or "mother" - which parent is heterozygous
-#' @param fatherId Father identifier
-#' @param motherId Mother identifier
-#' @param allele1 Reference allele
-#' @param allele2 Alternate allele
-#'
-#' @return List with hap1 and hap2, or NULL if cannot infer
-#' @keywords internal
-.inferHetParentPhase <- function(neighbors, phasedData, hetParent,
-                                 fatherId, motherId, allele1, allele2) {
-    parentId <- if (hetParent == "father") fatherId else motherId
-    hap1Col <- paste0(parentId, "_1")
-    hap2Col <- paste0(parentId, "_2")
-
-    ## Try to use nearest neighbor
-    neighborIdxList <- c(neighbors$right, neighbors$left)
-    neighborIdxList <- neighborIdxList[!vapply(neighborIdxList, is.null, logical(1))]
-
-    if (length(neighborIdxList) == 0) {
-        return(NULL)
-    }
-
-    ## Use first available neighbor
-    for (neighborIdx in neighborIdxList) {
-        hap1 <- phasedData[[hap1Col]][neighborIdx]
-        hap2 <- phasedData[[hap2Col]][neighborIdx]
-
-        if (!is.na(hap1) && !is.na(hap2)) {
-            ## Assume haplotype continuity
-            ## If neighbor has allele1 on haplotype 1, current SNP likely does too
-            return(list(hap1 = hap1, hap2 = hap2))
-        }
-    }
-
-    ## If no neighbor information, use simple assignment
-    ## Arbitrarily assign allele1 to haplotype 1, allele2 to haplotype 2
-    return(NULL)
+    sides <- unique(c(
+        inherited[left][which.max(positions[left])],
+        inherited[right][which.min(positions[right])]
+    ))
+    if (length(sides) == 1L) sides else NA_integer_
 }
 
 #' Get Informative Genotypes for Phasing

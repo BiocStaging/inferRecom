@@ -19,9 +19,9 @@
 Named character vector of phased alleles
 }
 \description{
-Each parent passes on its only allele. When the parents are homozygous for
-the same allele every child is assigned it; when they are homozygous for
-different alleles only heterozygous children are, and children with any
-other genotype are left as NA.
+Each parent passes on its only allele, so every child with the expected
+genotype carries the father's allele on its paternal haplotype and the
+mother's allele on its maternal haplotype. Children with any other
+genotype, which indicates a genotyping error, are left as NA.
 }
 \keyword{internal}

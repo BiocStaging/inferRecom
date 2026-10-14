@@ -61,16 +61,21 @@ and detected crossover events. The phasing process:
 \item Imputes homozygous sites from the other parent
 \item Phases parental haplotypes using crossover breakpoints
 \item Adds back non-informative SNPs with inferred genotypes where possible
-\item Uses neighboring informative SNPs to infer phase for ambiguous cases
 \item Outputs diploid genotypes for all family members across all SNPs
 }
 
-Non-informative SNPs are handled as follows:
+Non-informative SNPs are handled as follows. In every case, a child
+whose genotype is missing or inconsistent with its parents' genotypes is
+left unphased.
 \itemize{
-\item Both parents homozygous (same allele): Genotypes confidently inferred
-\item Both parents heterozygous: Phase uncertain, set to NA
-\item One parent heterozygous, one homozygous: Phase inferred from
-neighboring informative SNPs using haplotype continuity
+\item Both parents homozygous: each parent passes on its only allele.
+\item Both parents heterozygous: phase uncertain, set to unknown.
+\item One parent heterozygous, one homozygous (informative SNPs left out
+because of a missing or inconsistent genotype): each child's alleles
+follow from the genotypes. The heterozygous parent is phased from
+which of its haplotypes the children inherited at the nearest
+phased SNPs on both sides, and left unknown if that evidence is
+missing or conflicting.
 }
 
 The function requires crossover detection results from both parents as

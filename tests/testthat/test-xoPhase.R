@@ -614,31 +614,76 @@ test_that(".alignSnpData aligns SNPs correctly", {
     expect_equal(aligned$value[5], "G")
 })
 
-test_that(".findNeighboringSNPs finds correct neighbors", {
-    # Create mock phased data
+test_that(".inheritedHaplotype reads the haplotype from both sides", {
+    hap1 <- c("A", "C", "G", "T")
+    hap2 <- c("G", "T", "A", "C")
+    positions <- c(100, 200, 400, 500)
+    haplotype <- function(child, snpPos = 300) {
+        inferRecom:::.inheritedHaplotype(child, hap1, hap2, positions, snpPos)
+    }
+
+    expect_equal(haplotype(c("A", "C", "G", "T")), 1L) # hap1 on both sides
+    expect_equal(haplotype(c("G", "T", "A", "C")), 2L) # hap2 on both sides
+    expect_true(is.na(haplotype(c("A", "C", "A", "C")))) # crossover between
+    expect_equal(haplotype(c("A", "C", "A", "C"), snpPos = 50), 1L) # one side
+
+    # Only SNPs where the parent's haplotypes differ and the child's allele
+    # is known are used
+    expect_true(is.na(inferRecom:::.inheritedHaplotype(
+        c("A", NA), c("A", "C"), c("A", "T"), c(100, 400), 300
+    )))
+})
+
+test_that(".phaseOneHeterozygous phases the parent from the children", {
+    # Phased SNPs either side of position 300. The father is heterozygous
+    # there; C1 inherited his haplotype 1, C2 his haplotype 2, and C3 has a
+    # crossover between the sides.
     phasedData <- data.frame(
-        rsID = c("rs1", "rs2", "rs3", "rs4", "rs5"),
-        location = c(1000, 2000, 3000, 4000, 5000),
-        stringsAsFactors = FALSE
+        rsID = paste0("rs", 1:4), location = c(100, 200, 400, 500),
+        C1Pat = c("A", "C", "G", "T"), C1Mat = "A",
+        C2Pat = c("G", "T", "A", "C"), C2Mat = "A",
+        C3Pat = c("A", "C", "A", "C"), C3Mat = "A",
+        F_1 = c("A", "C", "G", "T"), F_2 = c("G", "T", "A", "C"),
+        M_1 = "A", M_2 = "A"
+    )
+    ids <- list(father = "F", mother = "M", children = c("C1", "C2", "C3"))
+    phase <- function(childGeno) {
+        inferRecom:::.phaseOneHeterozygous(
+            c(F = 1, M = 0), childGeno, c("C", "T"), ids, 300, phasedData
+        )
+    }
+
+    # Father C/T, mother C/C: C1 and C3 received T, C2 received C
+    phased <- phase(c(C1 = 1, C2 = 0, C3 = 1))
+    expect_equal(
+        phased[c("C1Pat", "C1Mat", "C2Pat", "C2Mat", "C3Pat", "C3Mat")],
+        c(C1Pat = "T", C1Mat = "C", C2Pat = "C", C2Mat = "C",
+          C3Pat = "T", C3Mat = "C")
+    )
+    # C1 (haplotype 1, T) and C2 (haplotype 2, C) both put T on haplotype 1
+    expect_equal(phased[c("F_1", "F_2")], c(F_1 = "T", F_2 = "C"))
+    expect_equal(phased[c("M_1", "M_2")], c(M_1 = "C", M_2 = "C"))
+
+    # Children that disagree leave the father unphased
+    conflict <- phase(c(C1 = 1, C2 = 1, C3 = 1))
+    expect_false(any(c("F_1", "F_2") %in% names(conflict)))
+    expect_equal(conflict[["C2Pat"]], "T")
+
+    # A child that cannot have these parents is left unphased
+    inconsistent <- phase(c(C1 = 1, C2 = 2, C3 = 1))
+    expect_false(any(c("C2Pat", "C2Mat") %in% names(inconsistent)))
+    expect_equal(inconsistent[c("F_1", "F_2")], c(F_1 = "T", F_2 = "C"))
+})
+
+test_that(".phaseBothHomozygous leaves inconsistent children unphased", {
+    ids <- list(father = "F", mother = "M", children = c("C1", "C2"))
+    phased <- inferRecom:::.phaseBothHomozygous(
+        c(F = 0, M = 0), c(C1 = 0, C2 = 1), c("A", "G"), ids
     )
 
-    phasedPosMap <- setNames(1:5, as.character(phasedData$location))
-
-    # Test finding neighbors
-    neighbors <- inferRecom:::.findNeighboringSNPs(2500, phasedData, phasedPosMap)
-
-    expect_equal(neighbors$left, 2) # rs2 at position 2000
-    expect_equal(neighbors$right, 3) # rs3 at position 3000
-
-    # Test at start
-    neighbors <- inferRecom:::.findNeighboringSNPs(500, phasedData, phasedPosMap)
-    expect_null(neighbors$left)
-    expect_equal(neighbors$right, 1)
-
-    # Test at end
-    neighbors <- inferRecom:::.findNeighboringSNPs(6000, phasedData, phasedPosMap)
-    expect_equal(neighbors$left, 5)
-    expect_null(neighbors$right)
+    expect_equal(phased[c("C1Pat", "C1Mat")], c(C1Pat = "A", C1Mat = "A"))
+    expect_false(any(c("C2Pat", "C2Mat") %in% names(phased)))
+    expect_equal(unname(phased[c("F_1", "F_2", "M_1", "M_2")]), rep("A", 4))
 })
 
 ## ============================================================================

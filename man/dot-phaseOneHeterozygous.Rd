@@ -4,15 +4,7 @@
 \alias{.phaseOneHeterozygous}
 \title{Phase a SNP Where One Parent Is Heterozygous}
 \usage{
-.phaseOneHeterozygous(
-  parentGeno,
-  childGeno,
-  alleles,
-  ids,
-  snpPos,
-  phasedData,
-  phasedPosMap
-)
+.phaseOneHeterozygous(parentGeno, childGeno, alleles, ids, snpPos, phasedData)
 }
 \arguments{
 \item{parentGeno}{Father and mother genotypes, one of them 1}
@@ -26,13 +18,18 @@
 \item{snpPos}{Physical position of the SNP}
 
 \item{phasedData}{Data frame with phased informative SNPs}
-
-\item{phasedPosMap}{Named vector mapping positions to rows of phasedData}
 }
 \value{
 Named character vector of phased alleles
 }
 \description{
-Uses haplotype information from neighboring informative SNPs.
+The homozygous parent's haplotypes both carry its allele. The allele each
+child received from the heterozygous parent follows from the genotypes
+(see \code{.matchAlleleCode()}); children with a missing or inconsistent
+genotype are left as NA. The heterozygous parent's phase follows from
+which of its haplotypes each child inherited around the SNP (see
+\code{.inheritedHaplotype()}): that haplotype carries the allele the child
+received. The parent is left as NA if no child gives evidence or the
+children disagree.
 }
 \keyword{internal}
