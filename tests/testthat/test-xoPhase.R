@@ -508,6 +508,20 @@ test_that(".matchAlleleCode works correctly", {
     expect_true(is.na(inferRecom:::.matchAlleleCode("father", 0, 0, 0)))
 })
 
+test_that(".getInformativeGenotypes keeps 0/0 parents, drops missing data", {
+    # Columns: father, mother, three children
+    geno <- rbind(
+        rs1 = c(0, 1, 0, 1, 1), # father 0/0, mother heterozygous
+        rs2 = c(1, 2, 1, 2, 2), # father heterozygous, mother 2/2
+        rs3 = c(1, 0, NA, 0, 1), # a child's genotype is missing
+        rs4 = c(1, 1, 0, 1, 2), # both parents heterozygous
+        rs5 = c(0, 1, 2, 1, 0) # child 2/2 is not possible
+    )
+
+    informative <- inferRecom:::.getInformativeGenotypes(geno)
+    expect_equal(rownames(informative), c("rs1", "rs2"))
+})
+
 test_that(".convertToNucleotides looks up alleles from the BIM file", {
     bim <- data.frame(
         snp = c("rs1", "rs2"), pos = c(1000L, 2000L),

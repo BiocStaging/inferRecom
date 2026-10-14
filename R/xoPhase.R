@@ -682,9 +682,9 @@ xoPhase <- function(plinkFile,
 #' @return Matrix of informative genotypes or NULL
 #' @keywords internal
 .getInformativeGenotypes <- function(genoSubset) {
-    ## Remove missing data (genotype == 0 or NA)
+    ## Remove SNPs with missing genotypes (NA; 0 is homozygous for allele 1)
     genoNoMissing <- genoSubset[apply(genoSubset, 1, function(row) {
-        all(row != 0 & !is.na(row))
+        all(!is.na(row))
     }), , drop = FALSE]
 
     if (nrow(genoNoMissing) == 0L) {
