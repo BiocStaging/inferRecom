@@ -996,8 +996,10 @@ xoPhase <- function(plinkFile,
     gtList <- lapply(phaseList, .familyGenotypes,
         snps = snps, ref = ref, alt = alt
     )
-    gt <- do.call(cbind, c(list(matrix(character(), length(snps), 0L)),
-        unname(gtList)))
+    gt <- do.call(cbind, c(
+        list(matrix(character(), length(snps), 0L)),
+        unname(gtList)
+    ))
     sampleIds <- as.character(colnames(gt))
     sampleIds <- sampleIds[order(match(sampleIds, fam$member))]
     gt <- gt[, sampleIds, drop = FALSE]

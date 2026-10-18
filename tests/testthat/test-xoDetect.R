@@ -413,7 +413,8 @@ test_that(".tripleCrossovers reports crossovers in the right child", {
     rownames(tripleGeno) <- paste0("rs", 1:20)
 
     xo <- inferRecom:::.tripleCrossovers(
-        tripleGeno, c("C1", "C2", "C3"), "F1", snpFilter = 5
+        tripleGeno, c("C1", "C2", "C3"), "F1",
+        snpFilter = 5
     )
     expect_equal(unname(xo[, "childId"]), c("C2", "C3"))
     expect_equal(unname(xo[, "startSnp"]), c("rs10", "rs15"))
@@ -421,7 +422,8 @@ test_that(".tripleCrossovers reports crossovers in the right child", {
 
     # Too few informative SNPs
     expect_null(inferRecom:::.tripleCrossovers(
-        tripleGeno[1:9, ], c("C1", "C2", "C3"), "F1", snpFilter = 5
+        tripleGeno[1:9, ], c("C1", "C2", "C3"), "F1",
+        snpFilter = 5
     ))
 })
 

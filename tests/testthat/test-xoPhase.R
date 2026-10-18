@@ -677,8 +677,10 @@ test_that(".phaseOneHeterozygous phases the parent from the children", {
     phased <- phase(c(C1 = 1, C2 = 0, C3 = 1))
     expect_equal(
         phased[c("C1Pat", "C1Mat", "C2Pat", "C2Mat", "C3Pat", "C3Mat")],
-        c(C1Pat = "T", C1Mat = "C", C2Pat = "C", C2Mat = "C",
-          C3Pat = "T", C3Mat = "C")
+        c(
+            C1Pat = "T", C1Mat = "C", C2Pat = "C", C2Mat = "C",
+            C3Pat = "T", C3Mat = "C"
+        )
     )
     # C1 (haplotype 1, T) and C2 (haplotype 2, C) both put T on haplotype 1
     expect_equal(phased[c("F_1", "F_2")], c(F_1 = "T", F_2 = "C"))

@@ -36,7 +36,8 @@ test_that(".orderedFamily orders genotypes father, mother, children", {
     # Too few genotyped members, or a parent not genotyped
     expect_null(inferRecom:::.orderedFamily("F1", fam, geno, minMembers = 5L))
     expect_null(inferRecom:::.orderedFamily(
-        "F1", fam, geno[, c("C1", "C2", "M")], minMembers = 3L
+        "F1", fam, geno[, c("C1", "C2", "M")],
+        minMembers = 3L
     ))
 })
 
