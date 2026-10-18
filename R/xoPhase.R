@@ -797,35 +797,32 @@ xoPhase <- function(plinkFile,
     actgCombPatAligned <- .alignSnpData(actgCombPat, allSnps)
     actgCombMatAligned <- .alignSnpData(actgCombMat, allSnps)
 
-    nRows <- nrow(actgCombPatAligned)
-    nChildren <- (ncol(actgCombPatAligned) - 3) ## Subtract rsID, location, hom
-    nCols <- 2 + 2 * nChildren ## rsID, location, 2 haplotypes per child
+    ## Child allele columns follow rsID and location; "hom" is last
+    nChildren <- ncol(actgCombPatAligned) - 3L
+    childCols <- seq_len(nChildren) + 2L
+    childNames <- colnames(actgCombPatAligned)[childCols]
 
-    phaseChildren <- matrix(character(nRows * nCols),
-        nrow = nRows, ncol = nCols
+    ## Paternal and maternal alleles, interleaved so that each child's
+    ## Pat column is followed by its Mat column
+    haps <- cbind(
+        as.matrix(actgCombPatAligned[, childCols, drop = FALSE]),
+        as.matrix(actgCombMatAligned[, childCols, drop = FALSE])
     )
+    haps <- haps[, c(rbind(childCols - 2L, childCols - 2L + nChildren)),
+        drop = FALSE
+    ]
+    storage.mode(haps) <- "character"
 
-    ## Add SNP IDs and locations
-    phaseChildren[, 1] <- as.character(actgCombPatAligned$rsID)
-    phaseChildren[, 2] <- as.character(actgCombPatAligned$location)
-
-    ## Add paternal and maternal haplotypes for each child
-    nameVec <- c("rsID", "location")
-
-    for (j in seq_len(nChildren)) {
-        colIdx <- j + 2 ## Skip rsID and location
-        phaseChildren[, 2 + (j - 1) * 2 + 1] <- as.character(actgCombPatAligned[, colIdx])
-        phaseChildren[, 2 + (j - 1) * 2 + 2] <- as.character(actgCombMatAligned[, colIdx])
-
-        childName <- colnames(actgCombPatAligned)[colIdx]
-        nameVec <- c(
-            nameVec, paste0(childName, "Pat"),
-            paste0(childName, "Mat")
-        )
-    }
-
-    result <- as.data.frame(phaseChildren, stringsAsFactors = FALSE)
-    colnames(result) <- nameVec
+    result <- data.frame(
+        rsID = as.character(actgCombPatAligned$rsID),
+        location = as.character(actgCombPatAligned$location),
+        haps,
+        stringsAsFactors = FALSE
+    )
+    colnames(result) <- c(
+        "rsID", "location", paste0(rep(childNames, each = 2), c("Pat", "Mat"))
+    )
+    rownames(result) <- NULL
 
     result
 }

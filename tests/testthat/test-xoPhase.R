@@ -592,6 +592,26 @@ test_that(".getOtherAllele retrieves complementary alleles", {
     expect_true(is.na(inferRecom:::.getOtherAllele("rs999", "A", bim)))
 })
 
+test_that(".phaseChildren pairs each child's paternal and maternal alleles", {
+    pat <- data.frame(
+        rsID = c("rs1", "rs2"), location = c("100", "200"),
+        C1 = c("A", "C"), C2 = c("G", "T"), hom = 1
+    )
+    mat <- data.frame(
+        rsID = c("rs1", "rs2"), location = c("100", "200"),
+        C1 = c("G", "T"), C2 = c("A", NA), hom = 1
+    )
+
+    phased <- inferRecom:::.phaseChildren(pat, mat)
+    expect_equal(
+        colnames(phased),
+        c("rsID", "location", "C1Pat", "C1Mat", "C2Pat", "C2Mat")
+    )
+    expect_equal(phased$C1Pat, c("A", "C"))
+    expect_equal(phased$C1Mat, c("G", "T"))
+    expect_equal(phased$C2Mat, c("A", NA))
+})
+
 test_that(".alignSnpData aligns SNPs correctly", {
     # Create test data
     snpDf <- data.frame(
