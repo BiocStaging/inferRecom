@@ -732,43 +732,33 @@ xoPhase <- function(plinkFile,
     pCol <- if (parent == "father") 1L else 2L
     nSamples <- ncol(actgMatrixHom) - 2L
 
-    ## Extract homozygous alleles from heterozygous parent's SNPs
-    homList <- lapply(rownames(actgMatrixHet), function(snp) {
-        bimIdx <- which(bim$snp == snp)
-        genoIdx <- which(rownames(genotypeDf) == snp)
+    ## At the other parent's heterozygous SNPs this parent is homozygous, so
+    ## every child received its only allele
+    snps <- rownames(actgMatrixHet)
+    bimIdx <- match(snps, bim$snp)
+    genoIdx <- match(snps, rownames(genotypeDf))
+    known <- !is.na(bimIdx) & !is.na(genoIdx)
+    snps <- snps[known]
+    bimIdx <- bimIdx[known]
+    genoIdx <- genoIdx[known]
 
-        if (length(bimIdx) == 0L || length(genoIdx) == 0L) {
-            return(NULL)
-        }
+    actgMatrixHom$hom <- 1
 
-        ## Determine homozygous allele
-        if (genotypeDf[genoIdx, pCol] == 0) {
-            homAllele <- bim$a1[bimIdx[1]]
-        } else {
-            homAllele <- bim$a2[bimIdx[1]]
-        }
-
-        ## Create row with homozygous allele for all samples
-        data.frame(
-            rsID = snp,
-            location = as.character(bim$pos[bimIdx[1]]),
-            matrix(homAllele, nrow = 1, ncol = nSamples),
-            stringsAsFactors = FALSE
-        )
-    })
-
-    homDf <- do.call(rbind, homList[!vapply(homList, is.null, logical(1))])
-
-    if (is.null(homDf) || nrow(homDf) == 0L) {
-        actgMatrixHom$hom <- 1
+    if (length(snps) == 0L) {
         return(actgMatrixHom)
     }
 
+    homAllele <- ifelse(genotypeDf[genoIdx, pCol] == 0,
+        bim$a1[bimIdx], bim$a2[bimIdx]
+    )
+    homDf <- data.frame(
+        rsID = snps,
+        location = as.character(bim$pos[bimIdx]),
+        matrix(homAllele, nrow = length(snps), ncol = nSamples),
+        hom = 0,
+        stringsAsFactors = FALSE
+    )
     colnames(homDf) <- colnames(actgMatrixHom)
-
-    ## Mark het vs hom SNPs
-    actgMatrixHom$hom <- 1
-    homDf$hom <- 0
 
     ## Combine and sort by location
     combinedDf <- rbind(actgMatrixHom, homDf)
