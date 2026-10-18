@@ -82,7 +82,9 @@ test_that("argument checks name the argument in their errors", {
         "'minSnps' must be a positive integer"
     )
     expect_error(
-        inferRecom:::.checkNumber(snpFilter, allowZero = TRUE, type = "integer"),
+        inferRecom:::.checkNumber(snpFilter,
+            allowZero = TRUE, type = "integer"
+        ),
         "'snpFilter' must be a non-negative integer"
     )
     expect_error(
@@ -158,7 +160,9 @@ test_that(".asGRangesResult uses UCSC-style chromosome names", {
 
 test_that(".ucscChromosome converts PLINK chromosome codes", {
     expect_equal(
-        inferRecom:::.ucscChromosome(c("1", "chr22", "23", "X", "24", "26", "MT")),
+        inferRecom:::.ucscChromosome(
+            c("1", "chr22", "23", "X", "24", "26", "MT")
+        ),
         c("chr1", "chr22", "chrX", "chrX", "chrY", "chrM", "chrM")
     )
     expect_equal(inferRecom:::.ucscChromosome(character()), character())
@@ -172,7 +176,9 @@ test_that(".asGRangesResult returns empty results of the same type", {
         GRanges()
     )
 
-    emptyCc <- inferRecom:::.asGRangesResult(emptyDf, "chr4", TRUE, NULL, "childId")
+    emptyCc <- inferRecom:::.asGRangesResult(
+        emptyDf, "chr4", TRUE, NULL, "childId"
+    )
     expect_s4_class(emptyCc, "GRangesList")
     expect_equal(names(emptyCc), c("case", "control"))
 })

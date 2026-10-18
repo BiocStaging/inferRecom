@@ -1,4 +1,4 @@
-## ========================== SHARED INTERNAL HELPERS ===========================
+## ========================= SHARED INTERNAL HELPERS ==========================
 
 ## ---------------- Argument checks ----------------
 ## Each stops with a message naming the argument, taken from the call, e.g.
@@ -75,7 +75,8 @@
         return(NULL)
     }
 
-    memberOrder <- c(fatherId, motherId, setdiff(members, c(fatherId, motherId)))
+    parents <- c(fatherId, motherId)
+    memberOrder <- c(parents, setdiff(members, parents))
     list(
         geno = geno[, memberOrder, drop = FALSE],
         fam = famSubset[match(memberOrder, famSubset[, 2]), ]
@@ -107,7 +108,8 @@
 ## ---------------- Data input and output ----------------
 
 ## Remove a .bed/.bim/.fam extension so plinkFile is the PLINK prefix. Other
-## extensions are kept because PLINK prefixes may contain dots (e.g. "cohort.v2")
+## extensions are kept because PLINK prefixes may contain dots
+## (e.g. "cohort.v2")
 .stripPlinkExtension <- function(plinkFile) {
     if (tolower(file_ext(plinkFile)) %in% c("bed", "bim", "fam")) {
         plinkFile <- file_path_sans_ext(plinkFile)

@@ -5,7 +5,8 @@
 #'
 #' @format PLINK binary format files (.bed, .bim, .fam) containing:
 #' \describe{
-#'   \item{Samples}{Simulated family trios and larger pedigrees with 2-3 children}
+#'   \item{Samples}{Simulated family trios and larger pedigrees with 2-3
+#'     children}
 #'   \item{SNPs}{Chromosome 4 markers}
 #'   \item{Genotypes}{Simulated genotype data with realistic LD structure}
 #'   \item{Families}{Mix of 2-child and 3-child families for testing}
@@ -49,7 +50,8 @@ NULL
 #'   \item{chr}{Chromosome identifier (chr4)}
 #'   \item{pos}{Physical position in base pairs (hg19/GRCh37)}
 #'   \item{rate}{Recombination rate (cM/Mb) at this position}
-#'   \item{cM}{Cumulative genetic distance in centiMorgans from chromosome start}
+#'   \item{cM}{Cumulative genetic distance in centiMorgans from chromosome
+#'     start}
 #' }
 #'
 #' Access the files using:

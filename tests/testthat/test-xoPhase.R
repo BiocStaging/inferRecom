@@ -313,7 +313,8 @@ test_that("xoPhase output is a RangedSummarizedExperiment", {
     )
 
     expect_s4_class(testResult, "RangedSummarizedExperiment")
-    expect_true(all(c("REF", "ALT") %in% colnames(mcols(rowRanges(testResult)))))
+    snpInfo <- mcols(rowRanges(testResult))
+    expect_true(all(c("REF", "ALT") %in% colnames(snpInfo)))
     expect_true(all(width(rowRanges(testResult)) == 1L))
 })
 
@@ -522,7 +523,7 @@ test_that(".getInformativeGenotypes keeps 0/0 parents, drops missing data", {
     expect_equal(rownames(informative), c("rs1", "rs2"))
 })
 
-test_that(".addNonInformativeSNPs phases parents homozygous for different alleles", {
+test_that(".addNonInformativeSNPs phases homozygous parents' alleles", {
     # One informative SNP (rs1) has been phased already
     phasedData <- data.frame(
         rsID = "rs1", location = 100,

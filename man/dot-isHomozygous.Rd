@@ -7,10 +7,12 @@
 .isHomozygous(genoVec)
 }
 \arguments{
-\item{genoVec}{Numeric vector of genotype codes (0=AA, 1=AB, 2=BB, NA=missing)}
+\item{genoVec}{Numeric vector of genotype codes (0=AA, 1=AB, 2=BB,
+NA=missing)}
 }
 \value{
-Integer vector: 1 for homozygous (0 or 2), 0 for heterozygous (1) or missing (NA)
+Integer vector: 1 for homozygous (0 or 2), 0 for heterozygous (1)
+or missing (NA)
 }
 \description{
 Converts numeric genotype codes to binary (1 = homozygous, 0 = heterozygous)

@@ -6,7 +6,8 @@
 \format{
 PLINK binary format files (.bed, .bim, .fam) containing:
 \describe{
-\item{Samples}{Simulated family trios and larger pedigrees with 2-3 children}
+\item{Samples}{Simulated family trios and larger pedigrees with 2-3
+children}
 \item{SNPs}{Chromosome 4 markers}
 \item{Genotypes}{Simulated genotype data with realistic LD structure}
 \item{Families}{Mix of 2-child and 3-child families for testing}

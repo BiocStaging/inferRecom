@@ -7,15 +7,16 @@
 #'     extensions).
 #' @param xoDetectPaternal \link[GenomicRanges:GRanges-class]{GRanges}; output
 #'     from \code{xoDetect()} for paternal crossovers (parent = "father").
-#' @param xoDetectMaternal \link[GenomicRanges:GRanges-class]{GRanges}; output from
-#'     \code{xoDetect()} for maternal crossovers (parent = "mother").
+#' @param xoDetectMaternal \link[GenomicRanges:GRanges-class]{GRanges}; output
+#'     from \code{xoDetect()} for maternal crossovers (parent = "mother").
 #' @param famIds Character vector or NULL; specific family IDs to phase. If
 #'     NULL, all families with 5+ members are analyzed. Default is NULL.
 #' @param rsOnly Logical; whether to restrict to SNPs with names beginning
 #'     with "rs". Default is TRUE.
 #' @param BPPARAM A BiocParallelParam object specifying parallel execution.
 #'     Default is \code{SerialParam()} for serial execution. Use
-#'     \code{MulticoreParam(workers = n)} for parallel processing across n cores.
+#'     \code{MulticoreParam(workers = n)} for parallel processing across n
+#'     cores.
 #'
 #' @return A \link[VariantAnnotation:VCF-class]{VCF} object with one row per
 #'     SNP and one column per family member, for all phased families. The
@@ -114,11 +115,11 @@
 #'
 #' @export
 xoPhase <- function(plinkFile,
-                    xoDetectPaternal,
-                    xoDetectMaternal,
-                    famIds = NULL,
-                    rsOnly = TRUE,
-                    BPPARAM = SerialParam()) {
+    xoDetectPaternal,
+    xoDetectMaternal,
+    famIds = NULL,
+    rsOnly = TRUE,
+    BPPARAM = SerialParam()) {
     ## Argument validation
     .checkString(plinkFile)
 
@@ -133,7 +134,8 @@ xoPhase <- function(plinkFile,
     .checkCharacterOrNull(famIds)
     .checkFlag(rsOnly)
 
-    if (!.checkSameChromosome(xoDetectMaternal) | !.checkSameChromosome(xoDetectPaternal)) {
+    if (!.checkSameChromosome(xoDetectMaternal) ||
+        !.checkSameChromosome(xoDetectPaternal)) {
         stop("GRanges object can only contain ranges from a single chromosome")
     }
 
@@ -234,7 +236,8 @@ xoPhase <- function(plinkFile,
 #' @param xoPat Paternal crossover data frame
 #' @param xoMat Maternal crossover data frame
 #'
-#' @return DataFrame with phased haplotypes, or NULL if the family cannot be phased
+#' @return DataFrame with phased haplotypes, or NULL if the family cannot be
+#'     phased
 #' @keywords internal
 .phaseSingleFamily <- function(familyId, geno, fam, bim, xoPat, xoMat) {
     ## Genotypes ordered father, mother, children
@@ -289,15 +292,21 @@ xoPhase <- function(plinkFile,
     childSnps <- as.character(phaseChildren$rsID)
 
     ## Align parent phases to match children SNP order
-    patPhaseAligned <- patPhase[match(childSnps, rownames(patPhase)), , drop = FALSE]
-    matPhaseAligned <- matPhase[match(childSnps, rownames(matPhase)), , drop = FALSE]
+    patPhaseAligned <- patPhase[match(childSnps, rownames(patPhase)), ,
+        drop = FALSE
+    ]
+    matPhaseAligned <- matPhase[match(childSnps, rownames(matPhase)), ,
+        drop = FALSE
+    ]
 
     ## Reset row names to match children
     rownames(patPhaseAligned) <- NULL
     rownames(matPhaseAligned) <- NULL
 
     ## Combine phased informative SNPs
-    famPhaseInformative <- cbind(phaseChildren, patPhaseAligned, matPhaseAligned)
+    famPhaseInformative <- cbind(
+        phaseChildren, patPhaseAligned, matPhaseAligned
+    )
 
     ## Add non-informative SNPs back to the output
     famPhaseFull <- .addNonInformativeSNPs(
@@ -330,8 +339,8 @@ xoPhase <- function(plinkFile,
 #' @return Data frame with all SNPs (informative and non-informative)
 #' @keywords internal
 .addNonInformativeSNPs <- function(phasedData, genoSubset, bim,
-                                   fatherId, motherId,
-                                   fatherCol, motherCol) {
+    fatherId, motherId,
+    fatherCol, motherCol) {
     ## Identify non-informative SNPs
     nonInfSnps <- setdiff(rownames(genoSubset), as.character(phasedData$rsID))
 
@@ -342,7 +351,9 @@ xoPhase <- function(plinkFile,
 
     ## Family member IDs; child IDs from the Pat/Mat haplotype columns
     parentCols <- paste0(rep(c(fatherId, motherId), each = 2), c("_1", "_2"))
-    childCols <- setdiff(colnames(phasedData), c("rsID", "location", parentCols))
+    childCols <- setdiff(
+        colnames(phasedData), c("rsID", "location", parentCols)
+    )
     ids <- list(
         father = fatherId, mother = motherId,
         children = unique(gsub("(Pat|Mat)$", "", childCols))
@@ -471,11 +482,12 @@ xoPhase <- function(plinkFile,
 #' @return Named character vector of phased alleles
 #' @keywords internal
 .phaseOneHeterozygous <- function(parentGeno, childGeno, alleles, ids,
-                                  snpPos, phasedData) {
+    snpPos, phasedData) {
     hetParent <- if (parentGeno[[1]] == 1) "father" else "mother"
     hetId <- ids[[hetParent]]
     homId <- if (hetParent == "father") ids$mother else ids$father
-    homAllele <- alleles[parentGeno[[if (hetParent == "father") 2 else 1]] / 2 + 1]
+    homGeno <- parentGeno[[if (hetParent == "father") 2 else 1]]
+    homAllele <- alleles[homGeno / 2 + 1]
     hetSuffix <- if (hetParent == "father") "Pat" else "Mat"
     homSuffix <- if (hetParent == "father") "Mat" else "Pat"
 
@@ -504,7 +516,10 @@ xoPhase <- function(plinkFile,
     impliedHap1 <- unique(impliedHap1[!is.na(impliedHap1)])
 
     phased <- c(
-        setNames(received[children], paste0(children, hetSuffix, recycle0 = TRUE)),
+        setNames(
+            received[children],
+            paste0(children, hetSuffix, recycle0 = TRUE)
+        ),
         setNames(
             rep(homAllele, length(children)),
             paste0(children, homSuffix, recycle0 = TRUE)

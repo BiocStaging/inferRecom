@@ -31,8 +31,10 @@ test_that("xoDetect works with 3-child maternal crossovers and female map", {
         expect_true(all(start(testResult) < end(testResult)))
         expect_true(all(start(testResult) > 0))
         # Check cM positions are reasonable (<500 cM per chromosome)
-        expect_true(all(mcols(testResult)$startCm >= 0 | is.na(mcols(testResult)$startCm)))
-        expect_true(all(mcols(testResult)$finishCm <= 500 | is.na(mcols(testResult)$finishCm)))
+        startCm <- mcols(testResult)$startCm
+        finishCm <- mcols(testResult)$finishCm
+        expect_true(all(startCm >= 0 | is.na(startCm)))
+        expect_true(all(finishCm <= 500 | is.na(finishCm)))
     }
 })
 
@@ -65,8 +67,10 @@ test_that("xoDetect works with 3-child paternal crossovers and male map", {
         expect_true(all(start(testResult) < end(testResult)))
         expect_true(all(start(testResult) > 0))
         # Check cM positions are reasonable (<500 cM per chromosome)
-        expect_true(all(mcols(testResult)$startCm >= 0 | is.na(mcols(testResult)$startCm)))
-        expect_true(all(mcols(testResult)$finishCm <= 500 | is.na(mcols(testResult)$finishCm)))
+        startCm <- mcols(testResult)$startCm
+        finishCm <- mcols(testResult)$finishCm
+        expect_true(all(startCm >= 0 | is.na(startCm)))
+        expect_true(all(finishCm <= 500 | is.na(finishCm)))
     }
 })
 
@@ -98,8 +102,10 @@ test_that("xoDetect handles 2-child families", {
         expect_true(all(start(testResult) < end(testResult)))
         expect_true(all(start(testResult) > 0))
         # Check cM positions are reasonable (<500 cM per chromosome)
-        expect_true(all(mcols(testResult)$startCm >= 0 | is.na(mcols(testResult)$startCm)))
-        expect_true(all(mcols(testResult)$finishCm <= 500 | is.na(mcols(testResult)$finishCm)))
+        startCm <- mcols(testResult)$startCm
+        finishCm <- mcols(testResult)$finishCm
+        expect_true(all(startCm >= 0 | is.na(startCm)))
+        expect_true(all(finishCm <= 500 | is.na(finishCm)))
     }
 })
 
@@ -385,7 +391,9 @@ test_that("snpFilter changes xoDetect results", {
 
 test_that("triple state codes identify the child that recombined", {
     patterns <- as.matrix(expand.grid(c(0, 1), c(0, 1), c(0, 1))[, 3:1])
-    stateOf <- function(p) inferRecom:::.tripleStateCodes[sum(p * c(4, 2, 1)) + 1]
+    stateOf <- function(p) {
+        inferRecom:::.tripleStateCodes[sum(p * c(4, 2, 1)) + 1]
+    }
 
     # Complementary patterns describe the same state
     expect_equal(
@@ -461,7 +469,9 @@ test_that(".addPositions adds physical and nearest genetic positions", {
         snp.name = c("rs1", "rs2", "rs3", "rs4"),
         position = c(1000L, 2000L, 0L, 4000L)
     )
-    geneticMap <- data.frame(chr = "chr4", pos = c(900, 2100, 4200), cM = c(1, 2, 4))
+    geneticMap <- data.frame(
+        chr = "chr4", pos = c(900, 2100, 4200), cM = c(1, 2, 4)
+    )
     xoData <- data.frame(
         startSnp = c("rs1", "rs2", "rs3"), finishSnp = c("rs2", "rs4", "rs9")
     )

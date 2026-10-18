@@ -9,7 +9,8 @@
 #'     extensions).
 #' @param mapFile Character string; path to a tab-delimited map file containing
 #'     columns: \code{chr}, \code{pos}, \code{rate}, \code{cM}.
-#' @param familySize Integer; either 2 or 3, specifying the family pedigree size.
+#' @param familySize Integer; either 2 or 3, specifying the family pedigree
+#'     size.
 #' @param parent Character; either \code{"mother"} or \code{"father"},
 #'     specifying the parent to trace crossovers from.
 #' @param rsOnly Logical; whether to restrict to SNPs with names beginning
@@ -27,7 +28,8 @@
 #'     path.
 #' @param BPPARAM A BiocParallelParam object specifying parallel execution.
 #'     Default is \code{SerialParam()} for serial execution. Use
-#'     \code{MulticoreParam(workers = n)} for parallel processing across n cores.
+#'     \code{MulticoreParam(workers = n)} for parallel processing across n
+#'     cores.
 #'
 #' @return A \link[GenomicRanges:GRanges-class]{GRanges} listing detected
 #'     crossover intervals with metadata columns: \code{childId} (in 3-child
@@ -215,7 +217,8 @@ xoDetect <- function(plinkFile,
         return(NULL)
     }
 
-    binaryMatrix <- (parentSubset[, -(1:2), drop = FALSE] == parentSubset[, 2]) * 1
+    childGeno <- parentSubset[, -(1:2), drop = FALSE]
+    binaryMatrix <- (childGeno == parentSubset[, 2]) * 1
     dimnames(binaryMatrix) <- list(rownames(parentSubset), NULL)
     binaryMatrix
 }
@@ -292,7 +295,7 @@ xoDetect <- function(plinkFile,
 ## ---------------- Process single family (for parallel execution) ------------
 
 .processSingleFamily <- function(currentFamId, famSubset, genoMatrix, parent,
-                                 snpFilter, familySize) {
+    snpFilter, familySize) {
     ## Genotypes ordered father, mother, children
     family <- .orderedFamily(currentFamId, famSubset, genoMatrix,
         minMembers = if (familySize == 2L) 4L else 5L
@@ -309,7 +312,10 @@ xoDetect <- function(plinkFile,
 
     ## Select parent-specific informative SNPs
     parentColIdx <- if (parent == "father") 1L else 2L
-    parentSpecificGeno <- informativeGeno[informativeGeno[, parentColIdx] == 2, , drop = FALSE]
+    parentSpecificGeno <- informativeGeno[
+        informativeGeno[, parentColIdx] == 2, ,
+        drop = FALSE
+    ]
 
     ## Create binary inheritance matrix
     binaryInheritance <- .makeBinaryInheritance(parentSpecificGeno)
@@ -318,7 +324,9 @@ xoDetect <- function(plinkFile,
     }
 
     if (familySize == 2L) {
-        return(.processTwoChildFamily(currentFamId, binaryInheritance, snpFilter))
+        return(.processTwoChildFamily(
+            currentFamId, binaryInheritance, snpFilter
+        ))
     }
 
     .processThreeChildFamily(

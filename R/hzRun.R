@@ -26,12 +26,15 @@
 #'     Requires affected status in FAM file. Default is FALSE.
 #' @param BPPARAM A BiocParallelParam object specifying parallel execution.
 #'     Default is \code{SerialParam()} for serial execution. Use
-#'     \code{MulticoreParam(workers = n)} for parallel processing across n cores.
+#'     \code{MulticoreParam(workers = n)} for parallel processing across n
+#'     cores.
 #'
-#' @return A \link[GenomicRanges:GRanges-class]{GRanges} object containing detected ROH with metadata
-#'     columns: \code{sampleId}, \code{startSnp}, \code{finishSnp}, \code{numSnps}.
-#'     If genetic map is provided, also includes \code{startCm}, \code{finishCm}.
-#'     If \code{caseControl = TRUE}, returns a \link[GenomicRanges:GRangesList-class]{GRangesList} with
+#' @return A \link[GenomicRanges:GRanges-class]{GRanges} object containing
+#'     detected ROH with metadata columns: \code{sampleId}, \code{startSnp},
+#'     \code{finishSnp}, \code{numSnps}. If genetic map is provided, also
+#'     includes \code{startCm}, \code{finishCm}. If
+#'     \code{caseControl = TRUE}, returns a
+#'     \link[GenomicRanges:GRangesList-class]{GRangesList} with
 #'     two elements: \code{case} and \code{control}. Returns an empty
 #'     \link[GenomicRanges:GRanges-class]{GRanges} if no ROH are detected.
 #'     Chromosome names use the UCSC style (e.g. \code{chr4}).
@@ -45,7 +48,8 @@
 #'
 #' This function identifies ROH by:
 #' \enumerate{
-#'   \item Converting genotypes to binary (1 = homozygous, 0 = heterozygous/missing)
+#'   \item Converting genotypes to binary (1 = homozygous,
+#'         0 = heterozygous/missing)
 #'   \item Identifying runs using run-length encoding
 #'   \item Filtering runs by minimum SNP count and physical length
 #'   \item Optionally filtering by minimum genetic length (cM)
@@ -63,11 +67,12 @@
 #' \itemize{
 #'   \item Physical length (minMb): Always applied
 #'   \item SNP count (minSnps): Always applied
-#'   \item Genetic length (minCm): Applied only if mapFile is provided and minCm is not NULL
+#'   \item Genetic length (minCm): Applied only if mapFile is provided and
+#'         minCm is not NULL
 #' }
 #'
-#' Parallel processing is performed by individual, improving efficiency for datasets
-#' with many samples.
+#' Parallel processing is performed by individual, improving efficiency for
+#' datasets with many samples.
 #'
 #' @examples
 #' # Serial execution (default)
@@ -227,9 +232,11 @@ hzRun <- function(plinkFile,
 #'
 #' Converts numeric genotype codes to binary (1 = homozygous, 0 = heterozygous)
 #'
-#' @param genoVec Numeric vector of genotype codes (0=AA, 1=AB, 2=BB, NA=missing)
+#' @param genoVec Numeric vector of genotype codes (0=AA, 1=AB, 2=BB,
+#'     NA=missing)
 #'
-#' @return Integer vector: 1 for homozygous (0 or 2), 0 for heterozygous (1) or missing (NA)
+#' @return Integer vector: 1 for homozygous (0 or 2), 0 for heterozygous (1)
+#'     or missing (NA)
 #' @keywords internal
 .isHomozygous <- function(genoVec) {
     ## Homozygous: 0 (AA) or 2 (BB)

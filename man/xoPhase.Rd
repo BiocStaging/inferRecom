@@ -20,8 +20,8 @@ extensions).}
 \item{xoDetectPaternal}{\link[GenomicRanges:GRanges-class]{GRanges}; output
 from \code{xoDetect()} for paternal crossovers (parent = "father").}
 
-\item{xoDetectMaternal}{\link[GenomicRanges:GRanges-class]{GRanges}; output from
-\code{xoDetect()} for maternal crossovers (parent = "mother").}
+\item{xoDetectMaternal}{\link[GenomicRanges:GRanges-class]{GRanges}; output
+from \code{xoDetect()} for maternal crossovers (parent = "mother").}
 
 \item{famIds}{Character vector or NULL; specific family IDs to phase. If
 NULL, all families with 5+ members are analyzed. Default is NULL.}
@@ -31,7 +31,8 @@ with "rs". Default is TRUE.}
 
 \item{BPPARAM}{A BiocParallelParam object specifying parallel execution.
 Default is \code{SerialParam()} for serial execution. Use
-\code{MulticoreParam(workers = n)} for parallel processing across n cores.}
+\code{MulticoreParam(workers = n)} for parallel processing across n
+cores.}
 }
 \value{
 A \link[VariantAnnotation:VCF-class]{VCF} object with one row per

@@ -9,7 +9,8 @@ Tab-delimited text file with columns:
 \item{chr}{Chromosome identifier (chr4)}
 \item{pos}{Physical position in base pairs (hg19/GRCh37)}
 \item{rate}{Recombination rate (cM/Mb) at this position}
-\item{cM}{Cumulative genetic distance in centiMorgans from chromosome start}
+\item{cM}{Cumulative genetic distance in centiMorgans from chromosome
+start}
 }
 
 Access the files using:

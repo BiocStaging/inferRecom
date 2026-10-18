@@ -24,7 +24,8 @@ extensions).}
 \item{mapFile}{Character string; path to a tab-delimited map file containing
 columns: \code{chr}, \code{pos}, \code{rate}, \code{cM}.}
 
-\item{familySize}{Integer; either 2 or 3, specifying the family pedigree size.}
+\item{familySize}{Integer; either 2 or 3, specifying the family pedigree
+size.}
 
 \item{parent}{Character; either \code{"mother"} or \code{"father"},
 specifying the parent to trace crossovers from.}
@@ -49,7 +50,8 @@ path.}
 
 \item{BPPARAM}{A BiocParallelParam object specifying parallel execution.
 Default is \code{SerialParam()} for serial execution. Use
-\code{MulticoreParam(workers = n)} for parallel processing across n cores.}
+\code{MulticoreParam(workers = n)} for parallel processing across n
+cores.}
 }
 \value{
 A \link[GenomicRanges:GRanges-class]{GRanges} listing detected
