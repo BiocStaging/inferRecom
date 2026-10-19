@@ -15,6 +15,9 @@ files with metadata columns:
 \item{finishCm}{Genetic position at interval end (cM)}
 }
 }
+\source{
+Created by \code{inst/scripts/make-crossovers.R}.
+}
 \value{
 No R object is returned. Access files via
 \code{system.file("extdata", package = "inferRecom")}.
@@ -30,8 +33,9 @@ Two crossover datasets are provided:
 \item \code{xoPat.rds} - Paternal crossover events
 }
 
-These objects contain detected crossover events from 3-child families
-in the simCEU dataset. Crossovers were identified using:
+These objects contain detected crossover events from the families with
+three or more children in the simCEU dataset. Crossovers were identified
+using:
 
 \preformatted{
 # Maternal crossovers

@@ -19,14 +19,16 @@ femaleMap <- read.delim(file.path(dataPath, "female_chr4.txt"))
 }
 }
 \source{
-Derived from European sex-specific maps from Bherer, et al. (2014).
+The chromosome 4 files of the refined European maps of Bherer, et
+al. (2017), unchanged; see \code{inst/scripts/make-genetic-maps.R}.
 }
 \value{
 No R object is returned. Access files via
 \code{system.file("extdata", package = "inferRecom")}.
 }
 \description{
-Sex-specific and sex-averaged genetic maps for chromosome 4.
+Female, male and sex-averaged genetic maps for chromosome 4
+(\code{female_chr4.txt}, \code{male_chr4.txt}, \code{sexavg_chr4.txt}).
 }
 \references{
 Bhérer, C., Campbell, C. L., & Auton, A. (2017). Refined genetic maps reveal

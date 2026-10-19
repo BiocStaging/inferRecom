@@ -6,24 +6,30 @@
 \format{
 PLINK binary format files (.bed, .bim, .fam) containing:
 \describe{
-\item{Samples}{Simulated family trios and larger pedigrees with 2-3
-children}
-\item{SNPs}{Chromosome 4 markers}
-\item{Genotypes}{Simulated genotype data with realistic LD structure}
-\item{Families}{Mix of 2-child and 3-child families for testing}
+\item{Families}{8 nuclear families, 40 individuals: three families with
+2 children, three with 3, one with 4 and one with 5}
+\item{SNPs}{1162 SNPs on chromosome 4 between 78.0 and 79.3 Mb (GRCh37)}
+\item{Genotypes}{Founder haplotypes sampled from HapMap CEU genotypes,
+with recombination simulated in each meiosis}
 }
 }
 \source{
-Simulated data based on CEU population structure from 1000 Genomes
-Project and R package \code{sim1000G}
+Simulated with the R package \code{sim1000G} from HapMap CEU
+genotypes (2010 release); see \code{inst/scripts/make-simCEU.R} and
+\code{inst/scripts/README.md}.
 }
 \value{
 No R object is returned. Access files via
 \code{system.file("extdata", package = "inferRecom")}.
 }
 \description{
-A simulated CEU (Utah residents with Northern and Western European ancestry)
-dataset for demonstrating crossover detection and ROH analysis.
+Simulated pedigrees based on HapMap CEU (Utah residents with Northern and
+Western European ancestry) genotypes, for demonstrating crossover
+detection, phasing and ROH analysis. These data are for package
+development and examples only and do not reflect any biological
+principle: recombination was simulated with a uniform map of 100 cM
+across the region, far above real recombination rates, so that the short
+region contains crossovers.
 }
 \details{
 The dataset includes three PLINK binary files:
@@ -42,7 +48,8 @@ plinkFile <- file.path(dataPath, "simCEU")
 }
 }
 \references{
-Siva, N. (2008). 1000 Genomes project.
+The International HapMap 3 Consortium (2010). Integrating common and rare
+genetic variation in diverse human populations. Nature, 467, 52-58.
 
 Dimitromanolakis, A., Xu, J., Krol, A., & Briollais, L. (2019). sim1000G:
 a user-friendly genetic variant simulator in R for unrelated individuals and
