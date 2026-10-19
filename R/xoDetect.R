@@ -23,7 +23,9 @@
 #'     crossovers. Default is 1.
 #' @param caseControl Logical; if TRUE, function returns a
 #'    \link[GenomicRanges:GRangesList-class]{GRangesList} of case and control
-#'    crossovers for 3+ child families. Default is \code{FALSE}.
+#'    crossovers for 3+ child families, using the affected status of each
+#'    child in the FAM file with PLINK coding: 2 = affected (case);
+#'    1 = unaffected or missing (control). Default is \code{FALSE}.
 #' @param out Character or NULL; if provided, output is written as a CSV at this
 #'     path.
 #' @param BPPARAM A BiocParallelParam object specifying parallel execution.

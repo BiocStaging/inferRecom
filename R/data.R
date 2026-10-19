@@ -17,7 +17,9 @@
 #' \itemize{
 #'   \item \code{simCEU.bed} - Binary genotype data
 #'   \item \code{simCEU.bim} - Variant information (SNP IDs, positions, alleles)
-#'   \item \code{simCEU.fam} - Sample information (family IDs, relationships)
+#'   \item \code{simCEU.fam} - Sample information (family IDs, relationships,
+#'     sex and affected status). One child per family is affected (PLINK
+#'     phenotype 2); everyone else is unaffected (1).
 #' }
 #'
 #' Access the files using:

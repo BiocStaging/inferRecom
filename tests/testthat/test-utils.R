@@ -127,7 +127,7 @@ test_that(".asGRangesResult builds GRanges and splits by case/control", {
         startPos = c(100, 200, 300),
         finishPos = c(150, 250, 350)
     )
-    famData <- data.frame(member = c("C1", "C2", "C3"), affected = c(1, NA, 1))
+    famData <- data.frame(member = c("C1", "C2", "C3"), affected = c(2, 1, 2))
 
     gr <- inferRecom:::.asGRangesResult(resultDf, "chr4", FALSE, famData,
         idCol = "childId"

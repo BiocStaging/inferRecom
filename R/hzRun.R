@@ -22,8 +22,10 @@
 #' @param sampleIds Character vector or NULL; specific sample IDs to analyze. If
 #'     NULL, all samples are analyzed. Default is NULL.
 #' @param caseControl Logical; if TRUE, function returns a
-#'     \link[GenomicRanges:GRanges-class]{GRanges} of case and control ROH.
-#'     Requires affected status in FAM file. Default is FALSE.
+#'     \link[GenomicRanges:GRangesList-class]{GRangesList} of case and
+#'     control ROH, using the affected status in the FAM file with PLINK
+#'     coding: 2 = affected (case); 1 = unaffected or missing (control).
+#'     Default is FALSE.
 #' @param BPPARAM A BiocParallelParam object specifying parallel execution.
 #'     Default is \code{SerialParam()} for serial execution. Use
 #'     \code{MulticoreParam(workers = n)} for parallel processing across n

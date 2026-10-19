@@ -162,8 +162,9 @@
 
 ## Convert a results DataFrame with startPos and finishPos columns to GRanges
 ## on the given chromosome. If caseControl is TRUE, split into a GRangesList
-## with "case" and "control" elements, using the affected status in famData of
-## the samples named in column idCol.
+## with "case" and "control" elements, using the PLINK affected status in
+## famData of the samples named in column idCol: 2 is a case, anything else
+## (1 = unaffected, or missing) a control.
 .asGRangesResult <- function(resultDf, chromosome, caseControl, famData,
                              idCol) {
     if (nrow(resultDf) == 0L) {
@@ -173,7 +174,7 @@
     resultDf$chromosome <- .ucscChromosome(chromosome)
 
     if (caseControl) {
-        affectedIds <- famData$member[famData$affected == 1]
+        affectedIds <- famData$member[famData$affected %in% 2]
         resultDf$caseStatus <- ifelse(resultDf[[idCol]] %in% affectedIds,
             "case",
             "control"
