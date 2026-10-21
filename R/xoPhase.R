@@ -912,76 +912,64 @@ xoPhase <- function(plinkFile,
 #' @return Data frame with two phased haplotypes
 #' @keywords internal
 .phaseParent <- function(actgMatrix, xoDetectMatrix, bim, parentId) {
-    nSnps <- nrow(actgMatrix)
-
-    ## Find a child without crossovers (if any)
-    childCols <- setdiff(
-        colnames(actgMatrix),
-        c("rsID", "location", "hom")
-    )
-
-    ## Check if any children have no crossovers
+    childCols <- setdiff(colnames(actgMatrix), c("rsID", "location", "hom"))
     childrenNoXo <- setdiff(childCols, xoDetectMatrix$childId)
 
-    if (length(childrenNoXo) > 0) {
-        ## Use first child without crossovers
-        parentL <- as.character(actgMatrix[[childrenNoXo[1]]])
-        names(parentL) <- actgMatrix$rsID
-
-        ## Other haplotype is complementary allele
-        parentR <- vapply(seq_along(parentL), function(i) {
-            .getOtherAllele(names(parentL)[i], parentL[i], bim)
-        }, character(1))
-
-        ## For homozygous sites, both haplotypes are the same
-        homSites <- which(actgMatrix$hom == 0)
-        parentR[homSites] <- parentL[homSites]
-
-        names(parentR) <- names(parentL)
+    ## Haplotype 1: the alleles a child without crossovers received, or else
+    ## those of the first child, switched back at its crossovers
+    hap1 <- if (length(childrenNoXo) > 0) {
+        as.character(actgMatrix[[childrenNoXo[1]]])
     } else {
-        ## Use crossover information to phase
-        childName <- childCols[1]
-        parentL <- as.character(actgMatrix[[childName]])
-        names(parentL) <- actgMatrix$rsID
-
-        ## Get crossover positions for this child
-        xoChild <- xoDetectMatrix[xoDetectMatrix$childId == childName, ]
-
-        if (nrow(xoChild) > 0) {
-            ## Count the crossovers completed at each SNP (end = position of
-            ## the first SNP after the crossover). Where the count is odd the
-            ## child carries the other parental haplotype, so switch the allele
-            ## back. Homozygous sites are the same on both haplotypes.
-            nXo <- findInterval(actgMatrix$location, sort(xoChild$end))
-            switchIdx <- which(nXo %% 2 == 1 & actgMatrix$hom != 0)
-
-            parentL[switchIdx] <- vapply(switchIdx, function(j) {
-                .getOtherAllele(names(parentL)[j], parentL[j], bim)
-            }, character(1))
-        }
-
-        ## Other haplotype is complementary
-        parentR <- vapply(seq_along(parentL), function(i) {
-            .getOtherAllele(names(parentL)[i], parentL[i], bim)
-        }, character(1))
-
-        ## For homozygous sites, both are the same
-        homSites <- which(actgMatrix$hom == 0)
-        parentR[homSites] <- parentL[homSites]
-
-        names(parentR) <- names(parentL)
+        .undoCrossovers(actgMatrix, childCols[1], xoDetectMatrix, bim)
     }
+    names(hap1) <- actgMatrix$rsID
 
-    ## Create output with parent ID column names
-    result <- data.frame(
-        parentL,
-        parentR,
-        stringsAsFactors = FALSE
-    )
-    colnames(result) <- c(paste0(parentId, "_1"), paste0(parentId, "_2"))
-    rownames(result) <- names(parentL)
+    ## Haplotype 2 carries the other allele, except at homozygous sites
+    hap2 <- vapply(seq_along(hap1), function(i) {
+        .getOtherAllele(names(hap1)[i], hap1[i], bim)
+    }, character(1))
+    homSites <- which(actgMatrix$hom == 0)
+    hap2[homSites] <- hap1[homSites]
+
+    result <- data.frame(hap1, hap2, stringsAsFactors = FALSE)
+    colnames(result) <- paste0(parentId, c("_1", "_2"))
+    rownames(result) <- names(hap1)
 
     result
+}
+
+#' Undo a Child's Crossovers
+#'
+#' The alleles a child received from a parent, switched to the parent's other
+#' allele wherever the child carries the parent's other haplotype, so that
+#' they all lie on one parental haplotype.
+#'
+#' @param actgMatrix Allele table for the parent (see .phaseParent())
+#' @param childName Child identifier (a column of actgMatrix)
+#' @param xoDetectMatrix Crossover data frame for the parent
+#' @param bim BIM data frame
+#'
+#' @return Character vector of alleles, one per row of actgMatrix
+#' @keywords internal
+.undoCrossovers <- function(actgMatrix, childName, xoDetectMatrix, bim) {
+    alleles <- as.character(actgMatrix[[childName]])
+    xoChild <- xoDetectMatrix[xoDetectMatrix$childId == childName, ]
+
+    if (nrow(xoChild) == 0L) {
+        return(alleles)
+    }
+
+    ## Count the crossovers completed at each SNP (end = position of the first
+    ## SNP after the crossover). Where the count is odd the child carries the
+    ## other parental haplotype, so switch the allele back. Homozygous sites
+    ## are the same on both haplotypes.
+    nXo <- findInterval(actgMatrix$location, sort(xoChild$end))
+    switchIdx <- which(nXo %% 2 == 1 & actgMatrix$hom != 0)
+    alleles[switchIdx] <- vapply(switchIdx, function(j) {
+        .getOtherAllele(actgMatrix$rsID[j], alleles[j], bim)
+    }, character(1))
+
+    alleles
 }
 
 #' Get Complementary Allele
