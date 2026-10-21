@@ -27,7 +27,7 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 8.0.0
 VignetteBuilder: knitr
-biocViews: Genetics, SNP, GenomeAnnotation, Sequencing, Coverage
+biocViews: Genetics, SNP, GenomeAnnotation, Sequencing, Coverage, DataImport
 Depends:
     R (>= 4.6.0),
     VariantAnnotation,
