@@ -136,27 +136,32 @@ xoDetect <- function(plinkFile,
     genoMatrix <- pedData$geno + 1
     genoMatrix[is.na(genoMatrix)] <- 0
 
-    famData <- pedData$fam
-
     ## Detect crossovers in all families of the requested size
     resDf <- .xoDetectFamilies(
-        pedData, genoMatrix, famData, mapDf, parent,
+        pedData, genoMatrix, pedData$fam, mapDf, parent,
         snpFilter, cmFilter, familySize, BPPARAM
     )
-
-    ## Write output if requested
-    if (!is.null(out) && nrow(resDf) > 0L) {
-        write.csv(as.data.frame(resDf),
-            file = out,
-            row.names = FALSE, fileEncoding = "UTF-8"
-        )
-        message("Results written to: ", out)
-    }
+    .writeXoResults(resDf, out)
 
     ## Convert to GRanges, split by case/control status if requested
-    .asGRangesResult(resDf, mapDf$chr[1], caseControl, famData,
+    .asGRangesResult(resDf, mapDf$chr[1], caseControl, pedData$fam,
         idCol = "childId"
     )
+}
+
+## Write crossover results to a UTF-8 CSV file without row names, if a file
+## name is given and there are results
+.writeXoResults <- function(resDf, out) {
+    if (is.null(out) || nrow(resDf) == 0L) {
+        return(invisible(NULL))
+    }
+
+    write.csv(as.data.frame(resDf),
+        file = out,
+        row.names = FALSE, fileEncoding = "UTF-8"
+    )
+    message("Results written to: ", out)
+    invisible(out)
 }
 
 
