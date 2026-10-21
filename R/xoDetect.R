@@ -219,7 +219,7 @@ xoDetect <- function(plinkFile,
         return(NULL)
     }
 
-    childGeno <- parentSubset[, -(1:2), drop = FALSE]
+    childGeno <- parentSubset[, -seq_len(2), drop = FALSE]
     binaryMatrix <- (childGeno == parentSubset[, 2]) * 1
     dimnames(binaryMatrix) <- list(rownames(parentSubset), NULL)
     binaryMatrix
