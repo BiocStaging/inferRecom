@@ -16,7 +16,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
+```{r options, include = FALSE}
 knitr::opts_chunk$set(
     collapse = TRUE,
     comment = "#>",
@@ -49,7 +49,7 @@ variety of applications including human disease, animal and plant studies and
 evolutionary research.
 
 ## Installation
-```{r, eval=FALSE}
+```{r install, eval=FALSE}
 if (!requireNamespace("BiocManager", quietly = TRUE)) {
     install.packages("BiocManager")
 }
@@ -95,7 +95,7 @@ informative SNPs to confirm a recombination event (`snpFilter`), as well as a
 map-based criterion of one centiMorgan to confirm a recombination event
 (`cmFilter`).
 
-```{r}
+```{r detect-crossovers}
 # Detect recombinations in families with two parents and three or more children
 #    and families with two parents and exactly two children
 # Filter for recombination with SNP-based and cM-based filters at default values
@@ -136,7 +136,7 @@ removes the genetic distance condition altogether. For comparison, the output
 below shows paternal recombinations in families with three or more children
 without the genetic distance filter.
 
-```{r}
+```{r no-cm-filter}
 pat3_0cM <- xoDetect(simCEU,
     mapMale,
     familySize = 3,
@@ -160,7 +160,7 @@ Bioconductor packages `trackViewer` [@ou2019trackviewer] and `rtracklayer`
 [@lawrence2009rtracklayer]. Here, case and control
 intervals are plotted for basic comparison using `trackViewer`.
 
-```{r}
+```{r plot-case-control}
 mat3CC <- xoDetect(simCEU,
     mapFemale,
     familySize = 3,
@@ -201,14 +201,14 @@ and many other applications benefit from more interactive visualization directly
 in the UCSC Genome Browser. Example tracks as exported in the code below are
 shown in the browser alongside recombination maps and nearby genes.
 
-```{r}
+```{r export-bed}
 #| eval: false
 export(mat3CC$case, "~/path/to/caseOutput.bed", format = "BED")
 
 export(mat3CC$control, "~/path/to/controlOutput.bed", format = "BED")
 ```
 
-```{r}
+```{r browser-figure}
 #| echo: false
 knitr::include_graphics("figures/example-browser.png")
 ```
@@ -229,7 +229,7 @@ As the output is a `GRanges` or `GRangesList` object, as in `xoDetect()`, the
 procedure to produce genome browser visualizations is identical to that of the
 recombination visualizations corresponding to `xoDetect()`.
 
-```{r}
+```{r runs-of-homozygosity}
 sexavg_chr4 <- file.path(exampleDir, "sexavg_chr4.txt")
 hzRun(simCEU, sexavg_chr4)
 ```
@@ -260,7 +260,7 @@ allele is the paternal and the second the maternal allele; for each parent the
 two alleles are the parent's two phased haplotypes. Family and parent IDs are
 stored in `colData()`.
 
-```{r}
+```{r phase-haplotypes}
 phased <- xoPhase(simCEU, pat3, mat3)
 phased
 
@@ -270,7 +270,7 @@ geno(phased)$GT[1158:1162, f6]
 
 The phased genotypes can be written to a VCF file with `writeVcf()`.
 
-```{r, eval=FALSE}
+```{r write-vcf, eval=FALSE}
 writeVcf(phased, "~/path/to/phased.vcf")
 ```
 
