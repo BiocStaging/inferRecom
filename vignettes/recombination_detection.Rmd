@@ -65,13 +65,14 @@ of informative markers.
 
 ## Detecting putative recombination intervals
 
-The first section demonstrates the core function *xoDetect()*, which localizes 
+The first section demonstrates the core function `xoDetect()`, which localizes 
 and individualizes recombination in families with both parents and three or more
 children, and localizes recombination in families with both parents and exactly 
-two children. It filters artifacts arising from genotyping error and other 
-experimental error using the default SNP-based criterion of five consecutive 
-informative SNPs to confirm a recombination event, as well as a map-based 
-criterion of one centiMorgan to confirm a recombination event.
+two children. It filters artifacts arising from genotyping error and other
+experimental error using the default SNP-based criterion of five consecutive
+informative SNPs to confirm a recombination event (`snpFilter`), as well as a
+map-based criterion of one centiMorgan to confirm a recombination event
+(`cmFilter`).
 
 ```{r}
 # Detect recombinations in families with two parents and three or more children
@@ -91,20 +92,20 @@ mat2 <- xoDetect(simCEU, mapFemale, familySize = 2, parent = "mother")
 
 pat3
 ```
-The output of the functions is a GRanges object or list showing the 
-individual/family IDs, SNP IDs, locations, and recombination rate map 
-centiMorgan distances for each recombination. Given that families with two 
-children do not have sufficient information to infer the recombinant child, the 
-'CHILD' column is omitted in the output. If the caseControl option is specified, 
-a list of GRanges separated by case/control status is returned. The results with
+The output of the functions is a `GRanges` object showing the
+individual/family IDs, SNP IDs, locations, and recombination rate map
+centiMorgan distances for each recombination. Given that families with two
+children do not have sufficient information to infer the recombinant child, the
+`childId` column is omitted in the output. If `caseControl = TRUE`, a
+`GRangesList` separated by case/control status is returned. The results with
 the default filtering parameters are shown below.
 
 ## Filtering for double recombination
 
 Filtering for closely-spaced events can remove genotyping error and other 
 artefacts in the data that are not consistent with true homologous 
-recombination. The default value for the SNP filter is 5, and for the 
-genetic-distance filter is 1cM. Setting the genetic distance-based filter to 0 
+recombination. The default value for the SNP filter (`snpFilter`) is 5, and
+for the genetic-distance filter (`cmFilter`) is 1 cM. Setting `cmFilter = 0`
 removes the genetic distance condition altogether. For comparison, the output 
 below shows paternal recombinations in families with three or more children 
 without the genetic distance filter.
@@ -128,8 +129,8 @@ due to interference in crossing over.
 
 ## Visualizing `GenomicRanges` output from `xoDetect()` using `trackViewer` and `rtracklayer`
 
-It is straightforward to visualize recombination intervals using the 
-`Bioconductor` packages `trackViewer` and `rtracklayer`. Here, case and control 
+It is straightforward to visualize recombination intervals using the
+Bioconductor packages `trackViewer` and `rtracklayer`. Here, case and control 
 intervals are plotted for basic comparison using `trackViewer`.
 
 ```{r}
@@ -189,14 +190,15 @@ knitr::include_graphics("figures/example-browser.png")
 
 One of the factors that affects the density of informative SNPs and therefore 
 the resolution of recombination intervals is the degree of homozygosity in the 
-sample. The function `hzRun()` is a tool to detect runs of homozygosity of a 
-user-specified minimum length in Mb (default 1Mb). To account for variation in 
-SNP density, it also includes a criterion for the minimum number of SNPs per 
-run, with a default value of 5. Users can also provide a genetic map and specify
-a minimum centiMorgan length for runs. This example applies a sex-averaged map 
+sample. The function `hzRun()` is a tool to detect runs of homozygosity of a
+user-specified minimum length in Mb (`minMb`, default 1 Mb). To account for
+variation in SNP density, it also includes a criterion for the minimum number of
+SNPs per run (`minSnps`), with a default value of 5. Users can also provide a
+genetic map (`mapFile`) and specify a minimum centiMorgan length for runs
+(`minCm`). This example applies a sex-averaged map 
 to all samples.
 
-As the output is a GenomicRanges object or list, as in `xoDetect()`, the 
+As the output is a `GRanges` or `GRangesList` object, as in `xoDetect()`, the 
 procedure to produce genome browser visualizations is identical to that of the 
 recombination visualizations corresponding to `xoDetect()`.
 
@@ -221,7 +223,7 @@ reported, and alleles that cannot be phased are shown as `.`.
 The function `xoPhase()` uses the sets of maternal and paternal recombinations
 to infer haplotype phase at all informative SNPs for all members of each the
 nuclear families with three or more children. There is also an option to specify
-a subset of family IDs for phasing.
+a subset of family IDs for phasing (`famIds`).
 
 The output is a `VCF` object from `VariantAnnotation`, with one column per
 family member and phased genotypes in the `GT` field. For each child the first
