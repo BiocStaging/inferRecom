@@ -244,8 +244,9 @@ distances greater than a few centiMorgans. The function `xoPhase()` implements a
 novel phasing algorithm to produce long-range haplotype phase information at
 informative SNPs. Using the information in the nuclear family structures, it is
 possible to obtain chromosome-scale haplotypes at the informative subset of
-SNPs. In these data, 36% of total SNPs are informative. Homozygous SNPs are also
-reported, and alleles that cannot be phased are shown as `.`.
+SNPs. In these data, between 14% and 36% of SNPs are informative, depending on
+the family. Homozygous SNPs are also reported, and alleles that cannot be phased
+are shown as `.`.
 
 The function `xoPhase()` uses the sets of maternal and paternal recombinations
 to infer haplotype phase at all informative SNPs for all members of each the
