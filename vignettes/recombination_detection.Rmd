@@ -248,7 +248,7 @@ writeVcf(phased, "~/path/to/phased.vcf")
 # Session Information
 The session information records the versions of all packages used in this
 vignette.
-```{r sessionInfo, eval=FALSE}
+```{r sessionInfo}
 sessionInfo()
 ```
 
