@@ -38,16 +38,8 @@ if (!requireNamespace("BiocManager", quietly = TRUE)) {
 BiocManager::install("inferRecom")
 ```
 
-```{r setup, echo=FALSE}
+```{r setup}
 library(inferRecom)
-library(S4Vectors)
-library(GenomicRanges)
-library(IRanges)
-library(snpStats)
-library(utils)
-library(dplyr)
-library(BiocParallel)
-library(SummarizedExperiment)
 library(rtracklayer)
 library(trackViewer)
 ```
