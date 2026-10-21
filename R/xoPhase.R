@@ -272,56 +272,20 @@ xoPhase <- function(plinkFile,
         return(NULL)
     }
 
-    ## Assign allele codes (1 or 2) for each parent
-    patAllele <- .assignAlleleCodes(genoAll,
-        parent = "father",
-        fatherCol = 1L, motherCol = 2L
-    )
-    matAllele <- .assignAlleleCodes(genoAll,
-        parent = "mother",
-        fatherCol = 1L, motherCol = 2L
-    )
+    ## Alleles each parent passed to each child, as nucleotides
+    alleles <- .parentAlleleTables(genoAll, bim)
 
-    ## Convert to nucleotides
-    patActg <- .convertToNucleotides(patAllele, bim)
-    matActg <- .convertToNucleotides(matAllele, bim)
-
-    ## Add homozygous SNPs from other parent
-    actgCombPat <- .addHomozygousSNPs(patActg, matActg, genoAll,
-        bim,
-        parent = "father"
-    )
-    actgCombMat <- .addHomozygousSNPs(matActg, patActg, genoAll,
-        bim,
-        parent = "mother"
-    )
-
-    ## Phase children
-    phaseChildren <- .phaseChildren(actgCombPat, actgCombMat)
-
-    ## Phase parents using crossover information
-    patPhase <- .phaseParent(actgCombPat, xoPat, bim, fatherId)
-    matPhase <- .phaseParent(actgCombMat, xoMat, bim, motherId)
-
-    ## Align parent phases with children (they should have same SNPs)
-    ## Get SNP order from phaseChildren
+    ## Phase children, and parents using crossover information
+    phaseChildren <- .phaseChildren(alleles$pat, alleles$mat)
     childSnps <- as.character(phaseChildren$rsID)
+    patPhase <- .phaseParent(alleles$pat, xoPat, bim, fatherId)
+    matPhase <- .phaseParent(alleles$mat, xoMat, bim, motherId)
 
-    ## Align parent phases to match children SNP order
-    patPhaseAligned <- patPhase[match(childSnps, rownames(patPhase)), ,
-        drop = FALSE
-    ]
-    matPhaseAligned <- matPhase[match(childSnps, rownames(matPhase)), ,
-        drop = FALSE
-    ]
-
-    ## Reset row names to match children
-    rownames(patPhaseAligned) <- NULL
-    rownames(matPhaseAligned) <- NULL
-
-    ## Combine phased informative SNPs
+    ## Combine phased informative SNPs, in the children's SNP order
     famPhaseInformative <- cbind(
-        phaseChildren, patPhaseAligned, matPhaseAligned
+        phaseChildren,
+        .alignToSnps(patPhase, childSnps),
+        .alignToSnps(matPhase, childSnps)
     )
 
     ## Add non-informative SNPs back to the output
@@ -336,6 +300,43 @@ xoPhase <- function(plinkFile,
     )
 
     DataFrame(famPhaseFull)
+}
+
+#' Alleles Passed on by Each Parent
+#'
+#' @param genoAll Informative genotypes, ordered father, mother, children
+#' @param bim BIM data frame
+#'
+#' @return List with \code{pat} and \code{mat}: for each parent, the
+#'     nucleotide each child received at the SNPs where that parent is
+#'     heterozygous, plus the SNPs where it is homozygous (marked
+#'     \code{hom = 0})
+#' @keywords internal
+.parentAlleleTables <- function(genoAll, bim) {
+    patActg <- .convertToNucleotides(.assignAlleleCodes(genoAll,
+        parent = "father", fatherCol = 1L, motherCol = 2L
+    ), bim)
+    matActg <- .convertToNucleotides(.assignAlleleCodes(genoAll,
+        parent = "mother", fatherCol = 1L, motherCol = 2L
+    ), bim)
+
+    list(
+        pat = .addHomozygousSNPs(patActg, matActg, genoAll, bim, "father"),
+        mat = .addHomozygousSNPs(matActg, patActg, genoAll, bim, "mother")
+    )
+}
+
+#' Align Phased Haplotypes to SNPs
+#'
+#' @param phase Data frame of phased haplotypes with SNP IDs as row names
+#' @param snps SNP IDs in the required order
+#'
+#' @return The rows of phase for snps, in that order, without row names
+#' @keywords internal
+.alignToSnps <- function(phase, snps) {
+    aligned <- phase[match(snps, rownames(phase)), , drop = FALSE]
+    rownames(aligned) <- NULL
+    aligned
 }
 
 #' Add Non-Informative SNPs to Phased Output
