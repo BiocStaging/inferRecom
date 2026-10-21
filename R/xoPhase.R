@@ -410,7 +410,7 @@ xoPhase <- function(plinkFile,
 #'     NA for a SNP that is not in the BIM file.
 #' @keywords internal
 .phaseNonInformativeSnp <- function(snpId, genoSubset, bim, ids, fatherCol,
-                                    motherCol, phasedData) {
+    motherCol, phasedData) {
     row <- setNames(
         rep(NA_character_, ncol(phasedData)), colnames(phasedData)
     )
@@ -559,7 +559,7 @@ xoPhase <- function(plinkFile,
 #'     children that give evidence
 #' @keywords internal
 .impliedHap1Alleles <- function(received, alleles, phasedData, hetId,
-                                hetSuffix, snpPos) {
+    hetSuffix, snpPos) {
     hap1 <- phasedData[[paste0(hetId, "_1")]]
     hap2 <- phasedData[[paste0(hetId, "_2")]]
     positions <- as.numeric(phasedData$location)
@@ -783,7 +783,7 @@ xoPhase <- function(plinkFile,
 #' @return Combined data frame with het and hom SNPs
 #' @keywords internal
 .addHomozygousSNPs <- function(actgMatrixHom, actgMatrixHet,
-                               genotypeDf, bim, parent) {
+    genotypeDf, bim, parent) {
     if (is.null(actgMatrixHom) || is.null(actgMatrixHet)) {
         return(actgMatrixHom)
     }

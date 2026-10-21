@@ -38,8 +38,8 @@
 ## A single number greater than zero, or at least zero if allowZero is TRUE.
 ## type names the expected value in the message ("numeric value", "integer")
 .checkNumber <- function(x, allowZero = FALSE, allowNull = FALSE,
-                         type = "numeric value",
-                         name = deparse(substitute(x))) {
+    type = "numeric value",
+    name = deparse(substitute(x))) {
     if (allowNull && is.null(x)) {
         return(invisible(TRUE))
     }
@@ -166,7 +166,7 @@
 ## famData of the samples named in column idCol: 2 is a case, anything else
 ## (1 = unaffected, or missing) a control.
 .asGRangesResult <- function(resultDf, chromosome, caseControl, famData,
-                             idCol) {
+    idCol) {
     if (nrow(resultDf) == 0L) {
         return(.emptyGRangesResult(caseControl))
     }

@@ -104,15 +104,15 @@
 #'
 #' @export
 xoDetect <- function(plinkFile,
-                     mapFile,
-                     familySize = c(2, 3),
-                     parent = c("mother", "father"),
-                     rsOnly = FALSE,
-                     snpFilter = 5,
-                     cmFilter = 1,
-                     caseControl = FALSE,
-                     out = NULL,
-                     BPPARAM = SerialParam()) {
+    mapFile,
+    familySize = c(2, 3),
+    parent = c("mother", "father"),
+    rsOnly = FALSE,
+    snpFilter = 5,
+    cmFilter = 1,
+    caseControl = FALSE,
+    out = NULL,
+    BPPARAM = SerialParam()) {
     ## Argument validation
     parent <- match.arg(parent)
     familySize <- as.integer(match.arg(as.character(familySize), c("2", "3")))
@@ -393,7 +393,7 @@ xoDetect <- function(plinkFile,
 }
 
 .processThreeChildFamily <- function(currentFamId, binaryInheritance,
-                                     currentFamilyOrdered, snpFilter) {
+    currentFamilyOrdered, snpFilter) {
     numChildren <- ncol(binaryInheritance)
 
     ## Analyse children in triples; an incomplete final triple is completed
@@ -413,7 +413,7 @@ xoDetect <- function(plinkFile,
 ## Crossovers in one triple of children: a character matrix with one row per
 ## crossover, or NULL if there are none
 .tripleCrossovers <- function(tripleGeno, tripleChildIds, currentFamId,
-                              snpFilter) {
+    snpFilter) {
     ## Too few informative SNPs to call crossovers
     if (nrow(tripleGeno) < 10L) {
         return(NULL)
@@ -453,7 +453,7 @@ xoDetect <- function(plinkFile,
 ## Detect crossovers in all families with exactly two children (familySize 2,
 ## 4 members) or with three or more children (familySize 3, 5+ members)
 .xoDetectFamilies <- function(pedData, genoMatrix, famData, geneticMap, parent,
-                              snpFilter, cmFilter, familySize, BPPARAM) {
+    snpFilter, cmFilter, familySize, BPPARAM) {
     ## Identify families of the requested size (2 parents + children)
     famCounts <- table(famData[, 1])
     famKeep <- if (familySize == 2L) {

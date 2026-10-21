@@ -120,14 +120,14 @@
 #'
 #' @export
 hzRun <- function(plinkFile,
-                  mapFile = NULL,
-                  minMb = 1,
-                  minSnps = 5,
-                  minCm = NULL,
-                  rsOnly = FALSE,
-                  sampleIds = NULL,
-                  caseControl = FALSE,
-                  BPPARAM = SerialParam()) {
+    mapFile = NULL,
+    minMb = 1,
+    minSnps = 5,
+    minCm = NULL,
+    rsOnly = FALSE,
+    sampleIds = NULL,
+    caseControl = FALSE,
+    BPPARAM = SerialParam()) {
     ## Argument validation
     .checkString(plinkFile)
     .checkString(mapFile, allowNull = TRUE)
@@ -272,7 +272,7 @@ hzRun <- function(plinkFile,
 #' @return Matrix with ROH information, or NULL if no ROH detected
 #' @keywords internal
 .detectRohSample <- function(genoVec, locationVec, snpNames, sampleId,
-                             minSnps, minBp, geneticMap = NULL, minCm = NULL) {
+    minSnps, minBp, geneticMap = NULL, minCm = NULL) {
     ## Runs of consecutive homozygous SNPs (heterozygous or missing SNPs end
     ## a run), with their first and last SNP and physical positions
     runs <- rle(.isHomozygous(genoVec))
@@ -333,8 +333,8 @@ hzRun <- function(plinkFile,
 #' @return Matrix with ROH information, or NULL
 #' @keywords internal
 .processSingleIndividual <- function(sampleIdx, genoMatrix, locationVec,
-                                     snpNames, sampleIds, minSnps, minBp,
-                                     geneticMap, minCm) {
+    snpNames, sampleIds, minSnps, minBp,
+    geneticMap, minCm) {
     .detectRohSample(
         genoVec = genoMatrix[, sampleIdx],
         locationVec = locationVec,
@@ -364,8 +364,8 @@ hzRun <- function(plinkFile,
 #' @return List of matrices, one per sample with detected ROH
 #' @keywords internal
 .detectRohAllSamples <- function(genoMatrix, locationVec, snpNames,
-                                 minSnps, minBp, geneticMap = NULL,
-                                 minCm = NULL, BPPARAM = SerialParam()) {
+    minSnps, minBp, geneticMap = NULL,
+    minCm = NULL, BPPARAM = SerialParam()) {
     numSamples <- ncol(genoMatrix)
     sampleIds <- colnames(genoMatrix)
 
