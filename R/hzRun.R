@@ -142,50 +142,63 @@ hzRun <- function(plinkFile,
         stop("'mapFile' must be provided when 'minCm' is specified")
     }
 
-    minSnps <- as.integer(minSnps)
-
-    ## Read PLINK data
+    ## Read PLINK data and, if provided, the genetic map
     plinkData <- .readPlinkGenotypes(plinkFile, rsOnly)
-    genoMatrix <- plinkData$geno
-    mapData <- plinkData$map
-    famData <- plinkData$fam
-
-    ## Read genetic map if provided
-    geneticMap <- NULL
-    if (!is.null(mapFile)) {
-        geneticMap <- .readGeneticMap(mapFile)
-    }
-
-    ## Filter for specific IDs if provided
-    if (!is.null(sampleIds)) {
-        sampleIdx <- which(colnames(genoMatrix) %in% sampleIds)
-        if (length(sampleIdx) == 0L) {
-            stop("None of the specified IDs found in genotype data")
-        }
-        genoMatrix <- genoMatrix[, sampleIdx, drop = FALSE]
-    }
-
-    ## Get physical positions for SNPs
-    snpNames <- rownames(genoMatrix)
-    locationVec <- .getSnpLocations(snpNames, mapData)
-
-    ## Convert threshold to base pairs
-    minBp <- minMb * 1e6
+    genoMatrix <- .selectSamples(plinkData$geno, sampleIds)
+    geneticMap <- if (is.null(mapFile)) NULL else .readGeneticMap(mapFile)
 
     ## Detect ROH for all samples (with parallel support)
     rohList <- .detectRohAllSamples(
-        genoMatrix, locationVec, snpNames,
-        minSnps, minBp, geneticMap, minCm,
-        BPPARAM
+        genoMatrix, .getSnpLocations(rownames(genoMatrix), plinkData$map),
+        rownames(genoMatrix), as.integer(minSnps), minMb * 1e6, geneticMap,
+        minCm, BPPARAM
     )
 
-    ## Return empty GRanges or GRangesList if no ROH were detected
-    if (length(rohList) == 0L) {
-        return(.emptyGRangesResult(caseControl))
+    ## Convert to GRanges, split by case/control status if requested
+    .asGRangesResult(
+        .rohResultDataFrame(rohList, withCm = !is.null(geneticMap)),
+        plinkData$map$chromosome[1], caseControl, plinkData$fam,
+        idCol = "sampleId"
+    )
+}
+
+
+## ========================== INTERNAL HELPERS ===========================
+
+#' Select Samples
+#'
+#' @param genoMatrix Genotype matrix with samples in columns
+#' @param sampleIds Character vector of sample IDs, or NULL for all samples
+#'
+#' @return The genotype matrix for the requested samples; stops if none of
+#'     them are found
+#' @keywords internal
+.selectSamples <- function(genoMatrix, sampleIds) {
+    if (is.null(sampleIds)) {
+        return(genoMatrix)
     }
 
-    ## Build DataFrame with the columns common to all outputs
+    sampleIdx <- which(colnames(genoMatrix) %in% sampleIds)
+    if (length(sampleIdx) == 0L) {
+        stop("None of the specified IDs found in genotype data")
+    }
+    genoMatrix[, sampleIdx, drop = FALSE]
+}
+
+#' ROH Results as a DataFrame
+#'
+#' @param rohList List of character matrices from \code{.detectRohSample()},
+#'     one per sample with ROH
+#' @param withCm Logical; whether the matrices include genetic positions
+#'
+#' @return DataFrame with one row per ROH (no rows if rohList is empty)
+#' @keywords internal
+.rohResultDataFrame <- function(rohList, withCm) {
     rohMat <- do.call(rbind, rohList)
+    if (is.null(rohMat)) {
+        rohMat <- matrix(character(), 0L, 8L)
+    }
+
     resultDf <- DataFrame(
         sampleId = rohMat[, 1],
         startSnp = rohMat[, 2],
@@ -196,19 +209,13 @@ hzRun <- function(plinkFile,
     )
 
     ## Add genetic positions if a map was provided
-    if (!is.null(geneticMap)) {
+    if (withCm) {
         resultDf$startCm <- as.numeric(rohMat[, 7])
         resultDf$finishCm <- as.numeric(rohMat[, 8])
     }
 
-    ## Convert to GRanges, split by case/control status if requested
-    .asGRangesResult(resultDf, mapData$chromosome[1], caseControl, famData,
-        idCol = "sampleId"
-    )
+    resultDf
 }
-
-
-## ========================== INTERNAL HELPERS ===========================
 
 #' Get Physical Positions for SNPs
 #'
