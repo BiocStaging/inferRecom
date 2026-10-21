@@ -1024,17 +1024,6 @@ xoPhase <- function(plinkFile,
     sampleIds <- sampleIds[order(match(sampleIds, fam$member))]
     gt <- gt[, sampleIds, drop = FALSE]
 
-    ## Sample information from the FAM file
-    famIdx <- match(sampleIds, fam$member)
-    sampleData <- DataFrame(
-        familyId = fam$pedigree[famIdx],
-        fatherId = fam$father[famIdx],
-        motherId = fam$mother[famIdx],
-        sex = fam$sex[famIdx],
-        affected = fam$affected[famIdx],
-        row.names = sampleIds
-    )
-
     ## SNP positions and alleles; PLINK codes a missing allele as "0"
     snpRanges <- GRanges(
         seqnames = .ucscChromosome(bim$chr[bimIdx]),
@@ -1046,7 +1035,7 @@ xoPhase <- function(plinkFile,
 
     VCF(
         rowRanges = snpRanges,
-        colData = sampleData,
+        colData = .vcfSampleData(sampleIds, fam),
         metadata = list(header = .phasedVcfHeader(sampleIds)),
         fixed = DataFrame(
             REF = DNAStringSet(ref),
@@ -1055,6 +1044,26 @@ xoPhase <- function(plinkFile,
             FILTER = rep("PASS", length(snps))
         ),
         geno = SimpleList(GT = gt)
+    )
+}
+
+#' Sample Information for the VCF
+#'
+#' @param sampleIds Character vector of sample IDs
+#' @param fam FAM data frame
+#'
+#' @return DataFrame with familyId, fatherId, motherId, sex and affected
+#'     from the FAM file, one row per sample
+#' @keywords internal
+.vcfSampleData <- function(sampleIds, fam) {
+    famIdx <- match(sampleIds, fam$member)
+    DataFrame(
+        familyId = fam$pedigree[famIdx],
+        fatherId = fam$father[famIdx],
+        motherId = fam$mother[famIdx],
+        sex = fam$sex[famIdx],
+        affected = fam$affected[famIdx],
+        row.names = sampleIds
     )
 }
 
