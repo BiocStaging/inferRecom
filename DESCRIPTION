@@ -29,7 +29,7 @@ RoxygenNote: 8.0.0
 VignetteBuilder: knitr
 biocViews: Genetics, SNP, GenomeAnnotation, Sequencing, Coverage
 Depends:
-    R (>= 4.5.0),
+    R (>= 4.6.0),
     VariantAnnotation,
     GenomicRanges,
     S4Vectors
