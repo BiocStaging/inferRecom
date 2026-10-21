@@ -274,9 +274,7 @@ The phased genotypes can be written to a VCF file with `writeVcf()`.
 writeVcf(phased, "~/path/to/phased.vcf")
 ```
 
-# References
-
-<div id="refs"></div>
+# References {.unnumbered}
 
 # Session Information
 The session information records the versions of all packages used in this
