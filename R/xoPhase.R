@@ -122,79 +122,29 @@ xoPhase <- function(plinkFile,
     BPPARAM = SerialParam()) {
     ## Argument validation
     .checkString(plinkFile)
-
-    if (!is(xoDetectPaternal, "GRanges")) {
-        stop("'xoDetectPaternal' must be a GRanges object")
-    }
-
-    if (!is(xoDetectMaternal, "GRanges")) {
-        stop("'xoDetectMaternal' must be a GRanges object")
-    }
-
+    .checkCrossovers(xoDetectPaternal)
+    .checkCrossovers(xoDetectMaternal)
     .checkCharacterOrNull(famIds)
     .checkFlag(rsOnly)
 
-    if (!.checkSameChromosome(xoDetectMaternal) ||
-        !.checkSameChromosome(xoDetectPaternal)) {
-        stop("GRanges object can only contain ranges from a single chromosome")
-    }
-
-    if (length(xoDetectPaternal) == 0L) {
-        warning("Empty GRanges object provided for 'xoDetectPaternal'")
-    }
-
-    if (length(xoDetectMaternal) == 0L) {
-        warning("Empty GRanges object provided for 'xoDetectMaternal'")
-    }
-
-    ## Convert GRanges to data frames for internal processing
-    xoDetectPaternal <- as.data.frame(xoDetectPaternal)
-    xoDetectMaternal <- as.data.frame(xoDetectMaternal)
-
-    ## Read PLINK data
+    ## Read PLINK data, and crossovers as data frames
     plinkData <- .readPlinkGenotypes(plinkFile, rsOnly)
-    geno <- plinkData$geno
-    fam <- plinkData$fam
-
-    ## SNP information with allele codes, in BIM file column order
-    map <- plinkData$map
-    bim <- data.frame(
-        chr = map$chromosome,
-        snp = map$snp.name,
-        cm = map$cM,
-        pos = map$position,
-        a1 = map$allele.1,
-        a2 = map$allele.2,
-        row.names = NULL
-    )
-
-    ## Determine families to analyze
-    if (!is.null(famIds)) {
-        familyIds <- famIds
-    } else {
-        famCounts <- table(fam[, 1])
-        famKeep <- names(famCounts)[famCounts >= 5]
-        fam <- fam[fam[, 1] %in% famKeep, , drop = FALSE]
-        familyIds <- unique(fam[, 1])
-    }
-
-    ## Crossover data is already converted from GRanges to data frames
-    xoPat <- xoDetectPaternal
-    xoMat <- xoDetectMaternal
+    bim <- .bimFromMap(plinkData$map)
+    xoPat <- as.data.frame(xoDetectPaternal)
+    xoMat <- as.data.frame(xoDetectMaternal)
 
     ## Phase each family using parallel processing
+    familyIds <- .familiesToPhase(plinkData$fam, famIds)
     phaseList <- bplapply(familyIds, function(id) {
         .phaseSingleFamily(
             familyId = id,
-            geno = geno,
-            fam = fam,
+            geno = plinkData$geno,
+            fam = plinkData$fam,
             bim = bim,
             xoPat = xoPat,
             xoMat = xoMat
         )
     }, BPPARAM = BPPARAM)
-
-    ## Set names
     names(phaseList) <- familyIds
 
     ## Drop families without phase information
@@ -206,11 +156,77 @@ xoPhase <- function(plinkFile,
         )
     }
 
-    .phaseListToVcf(phaseList[!noPhase], bim, fam)
+    .phaseListToVcf(phaseList[!noPhase], bim, plinkData$fam)
 }
 
 
 ## ========================== INTERNAL HELPERS ===========================
+
+#' Check Crossover Input
+#'
+#' Checks that a crossover object is a GRanges on a single chromosome, and
+#' warns if it is empty.
+#'
+#' @param x Crossover results from \code{xoDetect()}
+#' @param name Argument name used in messages
+#'
+#' @return Invisibly TRUE; stops with an error otherwise
+#' @keywords internal
+.checkCrossovers <- function(x, name = deparse(substitute(x))) {
+    if (!is(x, "GRanges")) {
+        stop(sprintf("'%s' must be a GRanges object", name), call. = FALSE)
+    }
+
+    if (!.checkSameChromosome(x)) {
+        stop("GRanges object can only contain ranges from a single chromosome",
+            call. = FALSE
+        )
+    }
+
+    if (length(x) == 0L) {
+        warning(sprintf("Empty GRanges object provided for '%s'", name),
+            call. = FALSE
+        )
+    }
+
+    invisible(TRUE)
+}
+
+#' SNP Information from the PLINK Map
+#'
+#' @param map SNP map from \code{read.plink()}
+#'
+#' @return Data frame with columns chr, snp, cm, pos, a1 and a2, in BIM file
+#'     column order
+#' @keywords internal
+.bimFromMap <- function(map) {
+    data.frame(
+        chr = map$chromosome,
+        snp = map$snp.name,
+        cm = map$cM,
+        pos = map$position,
+        a1 = map$allele.1,
+        a2 = map$allele.2,
+        row.names = NULL
+    )
+}
+
+#' Families to Phase
+#'
+#' @param fam FAM data frame
+#' @param famIds Character vector of family IDs, or NULL
+#'
+#' @return famIds if given, otherwise the IDs of all families with 5 or more
+#'     members (two parents and three or more children), in file order
+#' @keywords internal
+.familiesToPhase <- function(fam, famIds) {
+    if (!is.null(famIds)) {
+        return(famIds)
+    }
+
+    famCounts <- table(fam[, 1])
+    unique(fam[fam[, 1] %in% names(famCounts)[famCounts >= 5], 1])
+}
 
 #' Check if all chromosomes in GRanges are the same
 #'
