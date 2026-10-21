@@ -515,22 +515,10 @@ xoPhase <- function(plinkFile,
     names(received) <- ids$children
     children <- ids$children[!is.na(received)]
 
-    ## Allele on the heterozygous parent's haplotype 1 implied by each child
-    hap1 <- phasedData[[paste0(hetId, "_1")]]
-    hap2 <- phasedData[[paste0(hetId, "_2")]]
-    positions <- as.numeric(phasedData$location)
-    impliedHap1 <- vapply(children, function(child) {
-        inherited <- .inheritedHaplotype(
-            phasedData[[paste0(child, hetSuffix)]], hap1, hap2,
-            positions, snpPos
-        )
-        if (is.na(inherited)) {
-            return(NA_character_)
-        }
-        allele <- received[[child]]
-        if (inherited == 1L) allele else alleles[3L - match(allele, alleles)]
-    }, character(1))
-    impliedHap1 <- unique(impliedHap1[!is.na(impliedHap1)])
+    ## Alleles the children imply for the heterozygous parent's haplotype 1
+    impliedHap1 <- .impliedHap1Alleles(
+        received[children], alleles, phasedData, hetId, hetSuffix, snpPos
+    )
 
     phased <- c(
         setNames(
@@ -550,6 +538,45 @@ xoPhase <- function(plinkFile,
     }
 
     phased
+}
+
+#' Heterozygous Parent's Haplotype 1 as Implied by Each Child
+#'
+#' A child that inherited the parent's haplotype \emph{k} around the SNP (see
+#' \code{.inheritedHaplotype()}) shows that haplotype \emph{k} carries the
+#' allele the child received.
+#'
+#' @param received Named vector of the allele each child received from the
+#'     heterozygous parent, named by child ID
+#' @param alleles Allele 1 and allele 2 of the SNP
+#' @param phasedData Data frame with phased informative SNPs
+#' @param hetId ID of the heterozygous parent
+#' @param hetSuffix Suffix of the children's haplotype columns from that
+#'     parent ("Pat" or "Mat")
+#' @param snpPos Physical position of the SNP
+#'
+#' @return The distinct alleles implied for the parent's haplotype 1 by the
+#'     children that give evidence
+#' @keywords internal
+.impliedHap1Alleles <- function(received, alleles, phasedData, hetId,
+                                hetSuffix, snpPos) {
+    hap1 <- phasedData[[paste0(hetId, "_1")]]
+    hap2 <- phasedData[[paste0(hetId, "_2")]]
+    positions <- as.numeric(phasedData$location)
+
+    implied <- vapply(names(received), function(child) {
+        inherited <- .inheritedHaplotype(
+            phasedData[[paste0(child, hetSuffix)]], hap1, hap2,
+            positions, snpPos
+        )
+        if (is.na(inherited)) {
+            return(NA_character_)
+        }
+        allele <- received[[child]]
+        if (inherited == 1L) allele else alleles[3L - match(allele, alleles)]
+    }, character(1))
+
+    unique(implied[!is.na(implied)])
 }
 
 #' Haplotype a Child Inherited Around a SNP
