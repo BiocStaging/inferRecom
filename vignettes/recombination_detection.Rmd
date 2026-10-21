@@ -156,14 +156,14 @@ setTrackStyleParam(caseTrack, "color", "black")
 
 controlTrack <- new(
     "track",
-    dat = mat3CC$case,
+    dat = mat3CC$control,
     type = "gene",
     format = "BED"
 )
 
 setTrackStyleParam(controlTrack, "color", "blue")
 
-tl <- trackList(caseTrack, controlTrack) #
+tl <- trackList(caseTrack, controlTrack)
 viewRegion <- GRanges("chr4", IRanges(78000000, 79500000))
 viewTracks(tl, gr = viewRegion, autoOptimizeStyle = TRUE)
 ```
