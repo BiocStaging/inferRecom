@@ -1,6 +1,6 @@
 Package: inferRecom
 Title: Homologous Recombination  Detection in Family Pedigrees
-Version: 0.99.2
+Version: 0.99.3
 Authors@R: c(
     person("Catherine", "Mahoney", 
       email = "catherine.f.mahoney@gmail.com", 
