@@ -27,8 +27,26 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-This package provides tools for analyzing meiotic recombination, runs of
-homozygosity, and long-distance haplotype phase in family-based genetic data.
+Accurate detection of recombination events is essential for linkage analysis,
+haplotype inference, and investigating disease associations with de novo
+recombination. While population-based phasing methods such as *SHAPEIT* and
+*Beagle* achieve high accuracy over short distances, switch error rates (arising
+from genotyping error and small gene conversions that are not associated with
+the long range recombination of large chromosomal regions) accumulate over long
+genetic distances, limiting their utility for chromosome-scale recombination
+inference. The `inferRecom` package builds on work by @chowdhury2009genetic, who
+used analytic recombination detection to characterize recombination phenotypes
+and identify associated loci. This package detects recombination analytically in
+families with two parents and two or more children, applies a genetic distance
+and/or SNP-based filter to remove artifacts inconsistent with homologous
+recombination due to interference, implements chromosome-scale phasing at
+informative markers, and integrates with genomic visualization tools such as the
+UCSC Genome Browser and with the wider Bioconductor ecosystem. For two child
+families, the location of the recombination is identified, while in those with
+≥3 children, the individual carrying the recombination is additionally inferred.
+The package has utility in nuclear family genome-wide analyses for a wide
+variety of applications including human disease, animal and plant studies and
+evolutionary research.
 
 ## Installation
 ```{r, eval=FALSE}
@@ -71,12 +89,11 @@ of informative markers.
 The first section demonstrates the core function `xoDetect()`, which localizes
 and individualizes recombination in families with both parents and three or more
 children, and localizes recombination in families with both parents and exactly
-two children, from changes in the inheritance of informative SNPs among
-siblings [@chowdhury2009genetic]. It filters artifacts arising from genotyping
-error and other experimental error using the default SNP-based criterion of
-five consecutive informative SNPs to confirm a recombination event
-(`snpFilter`), as well as a map-based criterion of one centiMorgan to confirm a
-recombination event (`cmFilter`).
+two children. It filters artifacts arising from genotyping error and other
+experimental error using the default SNP-based criterion of five consecutive
+informative SNPs to confirm a recombination event (`snpFilter`), as well as a
+map-based criterion of one centiMorgan to confirm a recombination event
+(`cmFilter`).
 
 ```{r}
 # Detect recombinations in families with two parents and three or more children
